@@ -28,6 +28,7 @@ public class MainActivityFragment extends Fragment {
     private GridView gridView;
 
     private LruCache<String, Bitmap> mMemoryCache;
+    private boolean mSliding;
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
@@ -37,15 +38,22 @@ public class MainActivityFragment extends Fragment {
 
         galleryAdapter = new GalleryAdapter(inflater);
         gridView.setAdapter(galleryAdapter);
+
+        mSliding = true;
         gridView.setOnScrollListener(new AbsListView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(AbsListView view, int scrollState) {
-                Toast.makeText(inflater.getContext(), "onScrollStateChanged", Toast.LENGTH_SHORT).show();
+                mSliding = true;
+
             }
 
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-
+                if (mSliding && visibleItemCount != 0) {
+                    mSliding = false;
+                    galleryAdapter.upDate(firstVisibleItem, visibleItemCount);
+                    Toast.makeText(inflater.getContext(), "Scrolling", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -80,9 +88,13 @@ public class MainActivityFragment extends Fragment {
         private Image[] data;
         private Bitmap[] visibleData;
 
+        private ImageLoadingTask imageLoadingTask;
+
         public GalleryAdapter(LayoutInflater inflater) {
             super();
             mInflater = inflater;
+
+            visibleData = new Bitmap[20];
 
             // Загрузка файлов
             File rootSD = Environment.getExternalStorageDirectory();
@@ -102,9 +114,12 @@ public class MainActivityFragment extends Fragment {
 
         }
 
-        public void upDate(int position) {
-            // TODO Обновление
-            //new ImageLoadingTask().execute(position);
+        public void upDate(int firstVisibleItem, int visibleItemCount) {
+            if (imageLoadingTask != null && imageLoadingTask.getStatus() == AsyncTask.Status.RUNNING)
+                imageLoadingTask.cancel(false);
+
+            imageLoadingTask = new ImageLoadingTask();
+            imageLoadingTask.execute(firstVisibleItem, visibleItemCount);
         }
 
 
@@ -120,8 +135,19 @@ public class MainActivityFragment extends Fragment {
 
         @Override
         public long getItemId(int position) {
-            return 0;
+            return position;
         }
+
+       /* @Override
+        public View getDropDownView(int position, View convertView, ViewGroup parent) {
+            Image item = (Image) getItem(position);
+
+            addBitmapToMemoryCache(item.getFile(), visibleData[item.getImageID()]);
+
+            visibleData[item.getImageID()] = null;
+
+            return convertView;
+        }*/
 
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder;
@@ -137,8 +163,10 @@ public class MainActivityFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
-            if (image.getImageBitmap() != null)
-                holder.imageView.setImageBitmap(image.getImageBitmap());
+            if (getBitmapFromMemoryCache(image.getFile()) != null)
+                holder.imageView.setImageBitmap(getBitmapFromMemoryCache(image.getFile()));
+            else
+                holder.imageView.setImageBitmap(null);
 
             return convertView;
         }
@@ -148,7 +176,7 @@ public class MainActivityFragment extends Fragment {
             public ImageView imageView;
         }
 
-        class ImageLoadingTask extends AsyncTask<File, Void, Void> {
+        class ImageLoadingTask extends AsyncTask<Integer, Void, Void> {
 
             @Override
             protected void onPreExecute() {
@@ -156,15 +184,20 @@ public class MainActivityFragment extends Fragment {
             }
 
             @Override
-            protected Void doInBackground(File... params) {
+            protected Void doInBackground(Integer... params) {
+                final int firstPosition = params[0];
+                final int viewCount = params[1];
 
-
-                for (int i = 0; i < 50; i++) {
-                    data[i].setImage(decodeSampledBitmapFromFile(params[i].getPath(),
+                for (int i = firstPosition; i < (firstPosition + viewCount); i++) {
+                    if (isCancelled()) return null;
+                    if (getBitmapFromMemoryCache(data[i].getFile()) == null)
+                        addBitmapToMemoryCache(data[i].getFile(), decodeSampledBitmapFromFile(data[i].getFile(),
+                              mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width),
+                              mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height)));
+                   /* data[i].setImageID(decodeSampledBitmapFromFile(params[i].getPath(),
                             mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width),
-                            mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height)));
+                            mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height)));*/
                     publishProgress();
-                    // TODO Добавить отмену
                 }
 
                 return null;
@@ -174,6 +207,11 @@ public class MainActivityFragment extends Fragment {
             protected void onProgressUpdate(Void... values) {
                 super.onProgressUpdate();
                 galleryAdapter.notifyDataSetChanged();
+            }
+
+            @Override
+            protected void onCancelled() {
+                super.onCancelled();
             }
 
             public Bitmap decodeSampledBitmapFromFile(String file, int width, int height) {
@@ -211,33 +249,33 @@ public class MainActivityFragment extends Fragment {
         class Image {
 
             private String mImageFile;
-            private Bitmap mImage;
+            private int mImageID;
 
             Image() {
-                mImage = null;
+                mImageID = 0;
                 mImageFile = null;
             }
 
             Image(String imageFile) {
-                this.mImage = null;
+                this.mImageID = 0;
                 this.mImageFile = imageFile;
             }
 
-            Image(String imageFile, Bitmap image) {
+            Image(String imageFile, int image) {
                 this.mImageFile = imageFile;
-                this.mImage = image;
+                this.mImageID = image;
             }
 
-            public Bitmap getImageBitmap() {
-                return mImage;
+            public int getImageID() {
+                return mImageID;
             }
 
             public String getFile() {
                 return mImageFile;
             }
 
-            public void setImage(Bitmap Image) {
-                this.mImage = Image;
+            public void setImageID(int Image) {
+                this.mImageID = Image;
             }
 
             public void setImageFile(String ImageFile) {
