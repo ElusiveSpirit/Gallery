@@ -175,7 +175,7 @@ public class MainActivityFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
-            holder.imageView.setImageBitmap(visibleData.get(image.getImageID()));
+            holder.imageView.setImageBitmap(image.getBitmap());
 
 
             return convertView;
@@ -204,7 +204,12 @@ public class MainActivityFragment extends Fragment {
                     if (isCancelled()) return null;
 
                     bitmap = getBitmapFromMemoryCache(data[i].getFile());
-                    if (freeBitmapsID.empty()) {
+
+                    if (bitmap == null && data[i].getBitmap() == null) {
+                        data[i].setBitmap(decodeSampledBitmapFromFile(data[i].getFile(), IMAGE_WIDTH, IMAGE_HEIGHT));
+                    }
+
+                  /*  if (freeBitmapsID.empty()) {
                         if (bitmap == null)
                             visibleData.put(data[i].getImageID(), decodeSampledBitmapFromFile(data[i].getFile(),
                                     IMAGE_WIDTH,
@@ -221,14 +226,8 @@ public class MainActivityFragment extends Fragment {
                         }
                         else
                             visibleData.put(data[i].getImageID(), bitmap);
-                    }
+                    }*/
 
-                   /* if (getBitmapFromMemoryCache(data[i].getFile()) == null)
-                        addBitmapToMemoryCache(data[i].getFile(), decodeSampledBitmapFromFile(data[i].getFile(),
-                              100, 100));*/
-                   /* data[i].setImageID(decodeSampledBitmapFromFile(params[i].getPath(),
-                            mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width),
-                            mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height)));*/
                     publishProgress();
                 }
 
@@ -252,6 +251,7 @@ public class MainActivityFragment extends Fragment {
                 BitmapFactory.decodeFile(file, options);
 
                 options.inSampleSize = calculateInSampleSize(options, width, height);
+
 
                 options.inJustDecodeBounds = false;
                 return BitmapFactory.decodeFile(file, options);
@@ -291,23 +291,29 @@ public class MainActivityFragment extends Fragment {
         }
 
         class Image {
+            private Bitmap mBitmap;
             private String mImageFile;
             private int mImageID;
 
             Image() {
                 mImageID = 0;
                 mImageFile = null;
+                mBitmap = null;
             }
 
             Image(String imageFile) {
                 this.mImageID = 0;
                 this.mImageFile = imageFile;
+                mBitmap = null;
             }
 
             Image(String imageFile, int image) {
                 this.mImageFile = imageFile;
                 this.mImageID = image;
+                mBitmap = null;
             }
+
+            public Bitmap getBitmap() { return mBitmap; }
 
             public int getImageID() {
                 return mImageID;
@@ -315,6 +321,10 @@ public class MainActivityFragment extends Fragment {
 
             public String getFile() {
                 return mImageFile;
+            }
+
+            public void setBitmap(Bitmap bitmap) {
+                this.mBitmap = bitmap;
             }
 
             public void setImageID(int Image) {
