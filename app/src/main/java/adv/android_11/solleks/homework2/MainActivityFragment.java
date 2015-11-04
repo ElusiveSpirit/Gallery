@@ -14,15 +14,19 @@ import android.widget.AbsListView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.util.HashMap;
+import java.util.Stack;
 
 /**
  * A placeholder fragment containing a simple view.
  */
 public class MainActivityFragment extends Fragment {
+
+    private int IMAGE_WIDTH;
+    private int IMAGE_HEIGHT;
 
     private GalleryAdapter galleryAdapter;
     private GridView gridView;
@@ -30,9 +34,14 @@ public class MainActivityFragment extends Fragment {
     private LruCache<String, Bitmap> mMemoryCache;
     private boolean mSliding;
 
+    private HashMap<Integer, Bitmap> visibleData;
+
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
+        IMAGE_WIDTH = inflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width);
+        IMAGE_HEIGHT = inflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height);
+
         View view = inflater.inflate(R.layout.fragment_main, container, false);
         gridView = (GridView)view.findViewById(R.id.gridView);
 
@@ -52,7 +61,6 @@ public class MainActivityFragment extends Fragment {
                 if (mSliding && visibleItemCount != 0) {
                     mSliding = false;
                     galleryAdapter.upDate(firstVisibleItem, visibleItemCount);
-                    Toast.makeText(inflater.getContext(), "Scrolling", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -86,7 +94,7 @@ public class MainActivityFragment extends Fragment {
         private LayoutInflater mInflater;
 
         private Image[] data;
-        private Bitmap[] visibleData;
+        private Stack<Integer> freeBitmapsID;
 
         private ImageLoadingTask imageLoadingTask;
 
@@ -94,7 +102,8 @@ public class MainActivityFragment extends Fragment {
             super();
             mInflater = inflater;
 
-            visibleData = new Bitmap[20];
+            visibleData = new HashMap<>();
+            freeBitmapsID = new Stack<>();
 
             // Загрузка файлов
             File rootSD = Environment.getExternalStorageDirectory();
@@ -109,7 +118,7 @@ public class MainActivityFragment extends Fragment {
 
             data = new Image[imageList.length];
             for (int i = 0; i < imageList.length; i++) {
-                data[i] = new Image(imageList[i].getPath());
+                data[i] = new Image(imageList[i].getPath(), i);
             }
 
         }
@@ -135,19 +144,22 @@ public class MainActivityFragment extends Fragment {
 
         @Override
         public long getItemId(int position) {
-            return position;
+            return data[position].getImageID();
         }
 
-       /* @Override
+        @Override
         public View getDropDownView(int position, View convertView, ViewGroup parent) {
-            Image item = (Image) getItem(position);
 
-            addBitmapToMemoryCache(item.getFile(), visibleData[item.getImageID()]);
+            if (visibleData.size() > 50) {
+                // TODO Задать максимум битмапов
+                Image item = (Image) getItem(position);
+                addBitmapToMemoryCache(item.getFile(), visibleData.get(position));
 
-            visibleData[item.getImageID()] = null;
+                freeBitmapsID.push(position);
+            }
 
             return convertView;
-        }*/
+        }
 
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder;
@@ -163,10 +175,8 @@ public class MainActivityFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
-            if (getBitmapFromMemoryCache(image.getFile()) != null)
-                holder.imageView.setImageBitmap(getBitmapFromMemoryCache(image.getFile()));
-            else
-                holder.imageView.setImageBitmap(null);
+            holder.imageView.setImageBitmap(visibleData.get(image.getImageID()));
+
 
             return convertView;
         }
@@ -187,13 +197,35 @@ public class MainActivityFragment extends Fragment {
             protected Void doInBackground(Integer... params) {
                 final int firstPosition = params[0];
                 final int viewCount = params[1];
+                Bitmap bitmap;
 
+                // TODO Производить перезагрузку новых битмапов здесь, а не в удалении
                 for (int i = firstPosition; i < (firstPosition + viewCount); i++) {
                     if (isCancelled()) return null;
-                    if (getBitmapFromMemoryCache(data[i].getFile()) == null)
+
+                    bitmap = getBitmapFromMemoryCache(data[i].getFile());
+                    if (freeBitmapsID.empty()) {
+                        if (bitmap == null)
+                            visibleData.put(data[i].getImageID(), decodeSampledBitmapFromFile(data[i].getFile(),
+                                    IMAGE_WIDTH,
+                                    IMAGE_HEIGHT));
+                        else
+                            visibleData.put(data[i].getImageID(), bitmap);
+                    } else {
+                        if (bitmap == null) {
+                            int stackValue = freeBitmapsID.pop();
+                            visibleData.put(data[i].getImageID(), decodeSampledBitmapFromFile(data[i].getFile(),
+                                    IMAGE_WIDTH,
+                                    IMAGE_HEIGHT, visibleData.get(stackValue)));
+                            visibleData.remove(stackValue);
+                        }
+                        else
+                            visibleData.put(data[i].getImageID(), bitmap);
+                    }
+
+                   /* if (getBitmapFromMemoryCache(data[i].getFile()) == null)
                         addBitmapToMemoryCache(data[i].getFile(), decodeSampledBitmapFromFile(data[i].getFile(),
-                              mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width),
-                              mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height)));
+                              100, 100));*/
                    /* data[i].setImageID(decodeSampledBitmapFromFile(params[i].getPath(),
                             mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width),
                             mInflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height)));*/
@@ -225,6 +257,18 @@ public class MainActivityFragment extends Fragment {
                 return BitmapFactory.decodeFile(file, options);
             }
 
+            public Bitmap decodeSampledBitmapFromFile(String file, int width, int height, Bitmap reUsableBitmap) {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                BitmapFactory.decodeFile(file, options);
+
+                options.inSampleSize = calculateInSampleSize(options, width, height);
+
+                options.inJustDecodeBounds = false;
+                options.inBitmap = reUsableBitmap;
+                return BitmapFactory.decodeFile(file, options);
+            }
+
             public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
                 final int height = options.outHeight;
                 final int width = options.outWidth;
@@ -247,7 +291,6 @@ public class MainActivityFragment extends Fragment {
         }
 
         class Image {
-
             private String mImageFile;
             private int mImageID;
 
