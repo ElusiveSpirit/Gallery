@@ -2,6 +2,8 @@ package adv.android_11.solleks.homework2;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -17,7 +19,6 @@ import android.widget.ImageView;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.HashMap;
 import java.util.Stack;
 
 /**
@@ -34,13 +35,13 @@ public class MainActivityFragment extends Fragment {
     private LruCache<String, Bitmap> mMemoryCache;
     private boolean mSliding;
 
-    private HashMap<Integer, Bitmap> visibleData;
-
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
-        IMAGE_WIDTH = inflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width);
-        IMAGE_HEIGHT = inflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height);
+        setRetainInstance(true);
+      /*  IMAGE_WIDTH = inflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_width);
+        IMAGE_HEIGHT = inflater.getContext().getResources().getDimensionPixelSize(R.dimen.image_height);*/
+        IMAGE_WIDTH = IMAGE_HEIGHT = 100;
 
         View view = inflater.inflate(R.layout.fragment_main, container, false);
         gridView = (GridView)view.findViewById(R.id.gridView);
@@ -89,20 +90,16 @@ public class MainActivityFragment extends Fragment {
         return mMemoryCache.get(key);
     }
 
-    class GalleryAdapter extends BaseAdapter {
+    class GalleryAdapter extends BaseAdapter{
 
         private LayoutInflater mInflater;
 
         private Image[] data;
         private Stack<Integer> freeBitmapsID;
 
-        private ImageLoadingTask imageLoadingTask;
-
         public GalleryAdapter(LayoutInflater inflater) {
             super();
             mInflater = inflater;
-
-            visibleData = new HashMap<>();
             freeBitmapsID = new Stack<>();
 
             // Загрузка файлов
@@ -124,11 +121,10 @@ public class MainActivityFragment extends Fragment {
         }
 
         public void upDate(int firstVisibleItem, int visibleItemCount) {
-            if (imageLoadingTask != null && imageLoadingTask.getStatus() == AsyncTask.Status.RUNNING)
-                imageLoadingTask.cancel(false);
 
-            imageLoadingTask = new ImageLoadingTask();
-            imageLoadingTask.execute(firstVisibleItem, visibleItemCount);
+            for (int i = firstVisibleItem; i < firstVisibleItem + visibleItemCount; i++) {
+                data[i].upLoad();
+            }
         }
 
 
@@ -147,20 +143,6 @@ public class MainActivityFragment extends Fragment {
             return data[position].getImageID();
         }
 
-        @Override
-        public View getDropDownView(int position, View convertView, ViewGroup parent) {
-
-            if (visibleData.size() > 50) {
-                // TODO Задать максимум битмапов
-                Image item = (Image) getItem(position);
-                addBitmapToMemoryCache(item.getFile(), visibleData.get(position));
-
-                freeBitmapsID.push(position);
-            }
-
-            return convertView;
-        }
-
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder;
 
@@ -175,6 +157,7 @@ public class MainActivityFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
+            holder.imageView.setMaxHeight(holder.imageView.getWidth());
             holder.imageView.setImageBitmap(image.getBitmap());
 
 
@@ -186,131 +169,41 @@ public class MainActivityFragment extends Fragment {
             public ImageView imageView;
         }
 
-        class ImageLoadingTask extends AsyncTask<Integer, Void, Void> {
 
-            @Override
-            protected void onPreExecute() {
-                super.onPreExecute();
-            }
-
-            @Override
-            protected Void doInBackground(Integer... params) {
-                final int firstPosition = params[0];
-                final int viewCount = params[1];
-                Bitmap bitmap;
-
-                // TODO Производить перезагрузку новых битмапов здесь, а не в удалении
-                for (int i = firstPosition; i < (firstPosition + viewCount); i++) {
-                    if (isCancelled()) return null;
-
-                    bitmap = getBitmapFromMemoryCache(data[i].getFile());
-
-                    if (bitmap == null && data[i].getBitmap() == null) {
-                        data[i].setBitmap(decodeSampledBitmapFromFile(data[i].getFile(), IMAGE_WIDTH, IMAGE_HEIGHT));
-                    }
-
-                  /*  if (freeBitmapsID.empty()) {
-                        if (bitmap == null)
-                            visibleData.put(data[i].getImageID(), decodeSampledBitmapFromFile(data[i].getFile(),
-                                    IMAGE_WIDTH,
-                                    IMAGE_HEIGHT));
-                        else
-                            visibleData.put(data[i].getImageID(), bitmap);
-                    } else {
-                        if (bitmap == null) {
-                            int stackValue = freeBitmapsID.pop();
-                            visibleData.put(data[i].getImageID(), decodeSampledBitmapFromFile(data[i].getFile(),
-                                    IMAGE_WIDTH,
-                                    IMAGE_HEIGHT, visibleData.get(stackValue)));
-                            visibleData.remove(stackValue);
-                        }
-                        else
-                            visibleData.put(data[i].getImageID(), bitmap);
-                    }*/
-
-                    publishProgress();
-                }
-
-                return null;
-            }
-
-            @Override
-            protected void onProgressUpdate(Void... values) {
-                super.onProgressUpdate();
-                galleryAdapter.notifyDataSetChanged();
-            }
-
-            @Override
-            protected void onCancelled() {
-                super.onCancelled();
-            }
-
-            public Bitmap decodeSampledBitmapFromFile(String file, int width, int height) {
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inJustDecodeBounds = true;
-                BitmapFactory.decodeFile(file, options);
-
-                options.inSampleSize = calculateInSampleSize(options, width, height);
-
-
-                options.inJustDecodeBounds = false;
-                return BitmapFactory.decodeFile(file, options);
-            }
-
-            public Bitmap decodeSampledBitmapFromFile(String file, int width, int height, Bitmap reUsableBitmap) {
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inJustDecodeBounds = true;
-                BitmapFactory.decodeFile(file, options);
-
-                options.inSampleSize = calculateInSampleSize(options, width, height);
-
-                options.inJustDecodeBounds = false;
-                options.inBitmap = reUsableBitmap;
-                return BitmapFactory.decodeFile(file, options);
-            }
-
-            public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
-                final int height = options.outHeight;
-                final int width = options.outWidth;
-                int inSampleSize = 1;
-
-                if (height > reqHeight || width > reqWidth) {
-
-                    final int halfHeight = height / 2;
-                    final int halfWidth = width / 2;
-
-                    while ((halfHeight / inSampleSize) > reqHeight &&
-                            (halfWidth / inSampleSize) > reqWidth) {
-                        inSampleSize *= 2;
-                    }
-
-                }
-
-                return inSampleSize;
-            }
-        }
 
         class Image {
             private Bitmap mBitmap;
             private String mImageFile;
             private int mImageID;
+            private ImageLoadingTask mLoadingTask;
 
             Image() {
                 mImageID = 0;
                 mImageFile = null;
                 mBitmap = null;
+                mLoadingTask = null;
             }
 
             Image(String imageFile) {
                 this.mImageID = 0;
                 this.mImageFile = imageFile;
                 mBitmap = null;
+                mLoadingTask = null;
             }
 
             Image(String imageFile, int image) {
                 this.mImageFile = imageFile;
                 this.mImageID = image;
                 mBitmap = null;
+                mLoadingTask = new ImageLoadingTask();;
+            }
+
+            public AsyncTask.Status getLoadingTaskStatus() {
+                return mLoadingTask.getStatus();
+            }
+
+            public void cancelLoadTask() {
+                mLoadingTask.cancel(false);
             }
 
             public Bitmap getBitmap() { return mBitmap; }
@@ -334,7 +227,138 @@ public class MainActivityFragment extends Fragment {
             public void setImageFile(String ImageFile) {
                 this.mImageFile = ImageFile;
             }
+
+            public void upLoad() {
+                if (mBitmap == null && (mLoadingTask == null ||  mLoadingTask.getStatus() != AsyncTask.Status.RUNNING)) {
+                    //mLoadingTask = new ImageLoadingTask();
+                    mLoadingTask.execute(mImageFile);
+                }
+            }
+
+            class ImageLoadingTask extends AsyncTask<String, Void, Void> {
+
+                @Override
+                protected void onPreExecute() {
+                    super.onPreExecute();
+                }
+
+                @Override
+                protected Void doInBackground(String... params) {
+                    String fileName = params[0];
+
+                    if (isCancelled()) return null;
+
+                    // TODO Производить перезагрузку новых битмапов здесь, а не в удалении
+                    Bitmap bitmap = getBitmapFromMemoryCache(fileName);
+
+                    if (bitmap == null && mBitmap == null) {
+                        mBitmap = decodeSampledBitmapFromFile(fileName, IMAGE_WIDTH, IMAGE_HEIGHT);
+
+                        int orientation = 0;
+                        try {
+                            ExifInterface exif = new ExifInterface(fileName);
+                            orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, -1);
+                            switch (orientation) {
+                                case ExifInterface.ORIENTATION_ROTATE_270:
+                                    orientation = 270;
+                                    break;
+                                case ExifInterface.ORIENTATION_ROTATE_180:
+                                    orientation = 180;
+                                    break;
+                                case ExifInterface.ORIENTATION_ROTATE_90:
+                                    orientation = 90;
+                                    break;
+                                case ExifInterface.ORIENTATION_NORMAL:
+                                    orientation = 0;
+                                    break;
+                                default:
+                                    orientation = -1;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                        Matrix matrix = new Matrix();
+                        Bitmap decodedBitmap = mBitmap;
+                        if (orientation > 0) {
+                            matrix.postRotate(orientation);
+                            mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
+                                    mBitmap.getHeight(), matrix, true);
+                        } else {
+                            mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
+                                    mBitmap.getHeight());
+                        }
+
+                        if (!decodedBitmap.equals(mBitmap)) {
+                            decodedBitmap.recycle();
+                        }
+                    }
+
+                    return null;
+                }
+
+                @Override
+                protected void onPostExecute(Void aVoid) {
+                    super.onPostExecute(aVoid);
+
+                    galleryAdapter.notifyDataSetChanged();
+                }
+
+                @Override
+                protected void onCancelled() {
+                    super.onCancelled();
+                }
+
+                public Bitmap decodeSampledBitmapFromFile(String file, int width, int height) {
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds = true;
+                    BitmapFactory.decodeFile(file, options);
+
+                    options.inSampleSize = calculateInSampleSize(options, width, height);
+
+
+                    options.inJustDecodeBounds = false;
+                    options.inPreferredConfig = Bitmap.Config.RGB_565;
+                    return BitmapFactory.decodeFile(file, options);
+                }
+
+                public Bitmap decodeSampledBitmapFromFile(String file, int width, int height, Bitmap reUsableBitmap) {
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds = true;
+                    BitmapFactory.decodeFile(file, options);
+
+                    options.inSampleSize = calculateInSampleSize(options, width, height);
+
+                    options.inJustDecodeBounds = false;
+                    options.inBitmap = reUsableBitmap;
+                    options.inPreferredConfig = Bitmap.Config.RGB_565;
+                    return BitmapFactory.decodeFile(file, options);
+                }
+
+                public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+                    final int height = options.outHeight;
+                    final int width = options.outWidth;
+                    int inSampleSize = 1;
+
+                    if (height > reqHeight || width > reqWidth) {
+
+                        final int halfHeight = height / 2;
+                        final int halfWidth = width / 2;
+
+                        while ((halfHeight / inSampleSize) > reqHeight &&
+                                (halfWidth / inSampleSize) > reqWidth) {
+                            inSampleSize *= 2;
+                        }
+
+                    }
+
+                    return inSampleSize;
+                }
+            }
+
         }
+
+
     }
 
 
