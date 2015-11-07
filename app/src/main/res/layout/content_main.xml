@@ -4,4 +4,4 @@
     android:name="adv.android_11.solleks.homework2.MainActivityFragment"
     android:layout_width="match_parent" android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:layout="@layout/fragment_main" />
+    tools:layout="@layout/fragment_gallery" />
