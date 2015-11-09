@@ -37,7 +37,6 @@ public class MainActivityFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         freeBitmapsID = new Stack<>();
 
         // Загрузка файлов
@@ -52,7 +51,7 @@ public class MainActivityFragment extends Fragment {
 
         data = new Image[imageList.length];
         for (int i = 0; i < imageList.length; i++) {
-            data[i] = new Image(imageList[i].getPath(), i, galleryAdapter, mMemoryCache);
+            data[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
         }
 
         // Создание кеша

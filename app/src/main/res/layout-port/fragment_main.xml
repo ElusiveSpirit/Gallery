@@ -1,8 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
-<GridView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:numColumns="2"
-    android:horizontalSpacing="1dp"
-    android:verticalSpacing="1dp">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent"  tools:showIn="@layout/activity_main"
+    tools:context=".MainMenuFragment">
 
-</GridView>
+    <GridView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:id="@+id/menuGridView"
+        android:horizontalSpacing="1dp"
+        android:verticalSpacing="1dp"
+        android:numColumns="2"
+        android:layout_gravity="center" />
+</FrameLayout>
