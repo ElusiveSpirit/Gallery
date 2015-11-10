@@ -51,6 +51,13 @@ class Image extends Thread {
             return mImageFile;
     }
 
+    public String getFilePath() {
+        String s[] = mImageFile.split("/"), str = "";
+        for (int i = 1; i < s.length - 1; i++)
+            str += "/" + s[i];
+        return str;
+    }
+
     public void setBitmap(Bitmap bitmap) {
         this.mBitmap = bitmap;
     }
@@ -69,10 +76,10 @@ class Image extends Thread {
         Bitmap bitmap = null;// mMemoryCache.getBitmapFromMemoryCache(mImageFile);
 
         // TODO сделать свойство для размера загружаемых картинок
-        MainActivityFragment.IMAGE_WIDTH = MainActivityFragment.IMAGE_HEIGHT = 250;
+        GalleryFragment.IMAGE_WIDTH = GalleryFragment.IMAGE_HEIGHT = 250;
         try {
             if (bitmap == null && mBitmap == null) {
-                mBitmap = decodeSampledBitmapFromFile(mImageFile, MainActivityFragment.IMAGE_WIDTH, MainActivityFragment.IMAGE_HEIGHT);
+                mBitmap = decodeSampledBitmapFromFile(mImageFile, GalleryFragment.IMAGE_WIDTH, GalleryFragment.IMAGE_HEIGHT);
 
                 if (mBitmap != null) {
                     try {

@@ -1,5 +1,6 @@
 package adv.android_11.solleks.homework2;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -12,7 +13,6 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -23,12 +23,30 @@ import java.util.Arrays;
  * Created by Константин on 07.11.2015.
  *
  */
-public class MainMenuFragment extends Fragment {
+public class MainFragment extends Fragment {
 
     private ArrayList<String> data;
     private Image[] dataImage;
     private File file;
     private GalleryAdapter galleryAdapter;
+
+    private OnFragmentInteractionListener mListener;
+
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        try {
+            mListener = (OnFragmentInteractionListener) context;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(context.toString()
+                    + " должен реализовывать интерфейс OnFragmentInteractionListener");
+        }
+    }
+
+    public void openGalleryFragment(String fileName) {
+        mListener.onFragmentInteraction(fileName);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -132,7 +150,8 @@ public class MainMenuFragment extends Fragment {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Toast.makeText(inflater.getContext(), ((Image)galleryAdapter.getItem(position)).getFile(), Toast.LENGTH_SHORT).show();
+                openGalleryFragment(((Image) galleryAdapter.getItem(position)).getFilePath());
+               // Toast.makeText(inflater.getContext(), ((Image)galleryAdapter.getItem(position)).getFile(), Toast.LENGTH_SHORT).show();
             }
         });
         return view;
@@ -198,5 +217,9 @@ public class MainMenuFragment extends Fragment {
             public ImageView imageView;
             public TextView textView;
         }
+    }
+
+    public interface OnFragmentInteractionListener {
+        public void onFragmentInteraction(String fileName);
     }
 }
