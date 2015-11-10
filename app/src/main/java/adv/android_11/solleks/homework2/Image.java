@@ -7,8 +7,12 @@ import android.media.ExifInterface;
 
 /**
  * Created by Константин on 07.11.2015.
+ *
  */
-class Image extends Thread {
+ class Image extends Thread {
+
+    private int width;
+    private int height;
     private Bitmap mBitmap;
     private String mImageFile;
     private int mImageID;
@@ -18,12 +22,16 @@ class Image extends Thread {
         mImageID = 0;
         mImageFile = null;
         mBitmap = null;
+        width = GalleryFragment.IMAGE_WIDTH;
+        height = GalleryFragment.IMAGE_HEIGHT;
     }
 
     Image(String imageFile) {
         this.mImageID = 0;
         this.mImageFile = imageFile;
         mBitmap = null;
+        width = GalleryFragment.IMAGE_WIDTH;
+        height = GalleryFragment.IMAGE_HEIGHT;
     }
 
     Image(String imageFile, int image, MemoryCache cache) {
@@ -31,6 +39,8 @@ class Image extends Thread {
         this.mImageID = image;
         mBitmap = null;
         mMemoryCache = cache;
+        width = GalleryFragment.IMAGE_WIDTH;
+        height = GalleryFragment.IMAGE_HEIGHT;
     }
 
     public Bitmap getBitmap() { return mBitmap; }
@@ -58,6 +68,11 @@ class Image extends Thread {
         return str;
     }
 
+    public void setDimens(int width, int height) {
+        this.width = width;
+        this.height = height;
+    }
+
     public void setBitmap(Bitmap bitmap) {
         this.mBitmap = bitmap;
     }
@@ -75,11 +90,9 @@ class Image extends Thread {
         // TODO Производить перезагрузку новых битмапов здесь, а не в удалении
         Bitmap bitmap = null;// mMemoryCache.getBitmapFromMemoryCache(mImageFile);
 
-        // TODO сделать свойство для размера загружаемых картинок
-        GalleryFragment.IMAGE_WIDTH = GalleryFragment.IMAGE_HEIGHT = 250;
         try {
             if (bitmap == null && mBitmap == null) {
-                mBitmap = decodeSampledBitmapFromFile(mImageFile, GalleryFragment.IMAGE_WIDTH, GalleryFragment.IMAGE_HEIGHT);
+                mBitmap = decodeSampledBitmapFromFile(mImageFile, this.width, this.height);
 
                 if (mBitmap != null) {
                     try {
@@ -111,10 +124,17 @@ class Image extends Thread {
                         Bitmap decodedBitmap = mBitmap;
                         if (orientation > 0) {
                             matrix.postRotate(orientation);
+                            if (this.width == this.height)
+                                mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
+                                        mBitmap.getHeight(), matrix, true);
+                            else
+                                mBitmap = Bitmap.createBitmap(decodedBitmap, 0, 0, mBitmap.getWidth(),
+                                        mBitmap.getHeight(), matrix, true);
+                        } else if (this.width == this.height) {
                             mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
-                                    mBitmap.getHeight(), matrix, true);
+                                    mBitmap.getHeight());
                         } else {
-                            mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
+                            mBitmap = Bitmap.createBitmap(decodedBitmap, 0, 0, mBitmap.getWidth(),
                                     mBitmap.getHeight());
                         }
 
@@ -137,7 +157,6 @@ class Image extends Thread {
         BitmapFactory.decodeFile(file, options);
 
         options.inSampleSize = calculateInSampleSize(options, width, height);
-
 
         options.inJustDecodeBounds = false;
         options.inPreferredConfig = Bitmap.Config.RGB_565;
@@ -167,7 +186,7 @@ class Image extends Thread {
             final int halfHeight = height / 2;
             final int halfWidth = width / 2;
 
-            while ((halfHeight / inSampleSize) > reqHeight &&
+            while ((halfHeight / inSampleSize) > reqHeight ||
                     (halfWidth / inSampleSize) > reqWidth) {
                 inSampleSize *= 2;
             }

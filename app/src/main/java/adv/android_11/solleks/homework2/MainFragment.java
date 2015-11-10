@@ -25,6 +25,9 @@ import java.util.Arrays;
  */
 public class MainFragment extends Fragment {
 
+    public static int IMAGE_WIDTH;
+    public static int IMAGE_HEIGHT;
+
     private ArrayList<String> data;
     private Image[] dataImage;
     private File file;
@@ -52,12 +55,14 @@ public class MainFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+
         File rootSD = Environment.getExternalStorageDirectory();
         file = rootSD;
         data = saveFilesFromDir(rootSD);
         dataImage = new Image[data.size()];
         for (int i = 0; i < data.size(); i++) {
             dataImage[i] = new Image(data.get(i), i, null);
+            dataImage[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
         }
         ImageLoader imageLoader = new ImageLoader();
         imageLoader.execute(rootSD);

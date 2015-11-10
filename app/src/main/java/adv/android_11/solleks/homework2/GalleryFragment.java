@@ -66,10 +66,6 @@ public class GalleryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         freeBitmapsID = new Stack<>();
 
-
-        // Загрузка файлов
-  /*      File rootSD = Environment.getExternalStorageDirectory();
-        path = rootSD.getAbsolutePath() + "/DCIM/Camera";*/
         if (path != null)
             reLoadData(new File(path));
 
@@ -90,6 +86,7 @@ public class GalleryFragment extends Fragment {
         data = new Image[imageList.length];
         for (int i = 0; i < imageList.length; i++) {
             data[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
+            data[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
         }
     }
 
@@ -222,6 +219,10 @@ public class GalleryFragment extends Fragment {
             super.onProgressUpdate(values);
             galleryAdapter.notifyDataSetChanged();
         }
+    }
+
+    public String getOpenedDir() {
+        return path;
     }
 
     public interface OnDetailFragmentListener {

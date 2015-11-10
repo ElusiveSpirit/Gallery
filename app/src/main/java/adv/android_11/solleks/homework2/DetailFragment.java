@@ -20,8 +20,10 @@ public class DetailFragment extends Fragment {
     private ImageView mImageView;
     private Loader loader;
 
+    private int width;
+    private int height;
+
     public void setImageFile(String imageFile) {
-        // TODO Добавить размер файла
         loader = new Loader();
         loader.execute(imageFile);
     }
@@ -30,6 +32,7 @@ public class DetailFragment extends Fragment {
         @Override
         protected Image doInBackground(String... params) {
             Image image = new Image(params[0]);
+            image.setDimens(MainActivity.getDisplayWidth(), MainActivity.getDisplayHeight());
             image.run();
             while (image.isAlive())
                 Thread.yield();
@@ -48,6 +51,10 @@ public class DetailFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_item, container, false);
 
         mImageView = (ImageView) view.findViewById(R.id.imageViewDetail);
+        this.width = mImageView.getWidth();
+        this.height = mImageView.getHeight();
+
+        //this.width =
 
         return view;
     }

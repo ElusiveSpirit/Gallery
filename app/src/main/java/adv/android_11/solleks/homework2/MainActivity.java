@@ -1,5 +1,6 @@
 package adv.android_11.solleks.homework2;
 
+import android.app.FragmentManager;
 import android.os.Bundle;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
@@ -16,15 +17,23 @@ public class MainActivity extends AppCompatActivity
     private GalleryFragment galleryFragment;
     private DetailFragment detailFragment;
 
+    private String openedDir;
+
+    private static int DisplayWidth;
+    private static int DisplayHeight;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        FragmentManager fragmentManager = getFragmentManager();
+        // TODO Не перезапускать фрагменты при повороте экрана
         mainFragment = new MainFragment();
         galleryFragment = new GalleryFragment();
         detailFragment = new DetailFragment();
 
-        GalleryFragment.IMAGE_WIDTH = GalleryFragment.IMAGE_HEIGHT = 100;
+        GalleryFragment.IMAGE_WIDTH = GalleryFragment.IMAGE_HEIGHT = getResources().getDimensionPixelSize(R.dimen.image_height);
+        MainFragment.IMAGE_HEIGHT = MainFragment.IMAGE_WIDTH = getResources().getDimensionPixelOffset(R.dimen.preview_image_height);
 
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -34,6 +43,7 @@ public class MainActivity extends AppCompatActivity
         fragmentTransaction.add(R.id.fragmentContainer, mainFragment);
         fragmentTransaction.addToBackStack(null);
         fragmentTransaction.commit();
+
     }
 
     @Override
@@ -50,7 +60,7 @@ public class MainActivity extends AppCompatActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
+       //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             return true;
         }
@@ -66,7 +76,8 @@ public class MainActivity extends AppCompatActivity
         fragmentTransaction.addToBackStack(null);
 
         fragmentTransaction.commit();
-        galleryFragment.changePath(fileName);
+        if (galleryFragment.getOpenedDir() == null || !galleryFragment.getOpenedDir().equals(fileName))
+            galleryFragment.changePath(fileName);
     }
 
     @Override
@@ -77,6 +88,17 @@ public class MainActivity extends AppCompatActivity
         fragmentTransaction.addToBackStack(null);
 
         fragmentTransaction.commit();
+
+        DisplayHeight = findViewById(R.id.fragmentContainer).getMeasuredHeight();
+        DisplayWidth = findViewById(R.id.fragmentContainer).getMeasuredWidth();
         detailFragment.setImageFile(fileName);
     }
+
+    public static int getDisplayWidth() {
+        return DisplayWidth;
+    }
+    public static int getDisplayHeight() {
+        return DisplayHeight;
+    }
+
 }
