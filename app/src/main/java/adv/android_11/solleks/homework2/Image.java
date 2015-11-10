@@ -43,6 +43,14 @@ class Image extends Thread {
         return mImageFile;
     }
 
+    public String getFileDir() {
+        String s[] = mImageFile.split("/");
+        if (s.length > 2)
+            return s[s.length - 2];
+        else
+            return mImageFile;
+    }
+
     public void setBitmap(Bitmap bitmap) {
         this.mBitmap = bitmap;
     }
@@ -60,47 +68,55 @@ class Image extends Thread {
         // TODO Производить перезагрузку новых битмапов здесь, а не в удалении
         Bitmap bitmap = null;// mMemoryCache.getBitmapFromMemoryCache(mImageFile);
 
+        // TODO сделать свойство для размера загружаемых картинок
+        MainActivityFragment.IMAGE_WIDTH = MainActivityFragment.IMAGE_HEIGHT = 250;
         try {
             if (bitmap == null && mBitmap == null) {
                 mBitmap = decodeSampledBitmapFromFile(mImageFile, MainActivityFragment.IMAGE_WIDTH, MainActivityFragment.IMAGE_HEIGHT);
 
-                int orientation = 0;
-                try {
-                    ExifInterface exif = new ExifInterface(mImageFile);
-                    orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, -1);
-                    switch (orientation) {
-                        case ExifInterface.ORIENTATION_ROTATE_270:
-                            orientation = 270;
-                            break;
-                        case ExifInterface.ORIENTATION_ROTATE_180:
-                            orientation = 180;
-                            break;
-                        case ExifInterface.ORIENTATION_ROTATE_90:
-                            orientation = 90;
-                            break;
-                        case ExifInterface.ORIENTATION_NORMAL:
-                            orientation = 0;
-                            break;
-                        default:
-                            orientation = -1;
+                if (mBitmap != null) {
+                    try {
+                        int orientation = 0;
+                        try {
+                            ExifInterface exif = new ExifInterface(mImageFile);
+                            orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, -1);
+                            switch (orientation) {
+                                case ExifInterface.ORIENTATION_ROTATE_270:
+                                    orientation = 270;
+                                    break;
+                                case ExifInterface.ORIENTATION_ROTATE_180:
+                                    orientation = 180;
+                                    break;
+                                case ExifInterface.ORIENTATION_ROTATE_90:
+                                    orientation = 90;
+                                    break;
+                                case ExifInterface.ORIENTATION_NORMAL:
+                                    orientation = 0;
+                                    break;
+                                default:
+                                    orientation = -1;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+                        Matrix matrix = new Matrix();
+                        Bitmap decodedBitmap = mBitmap;
+                        if (orientation > 0) {
+                            matrix.postRotate(orientation);
+                            mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
+                                    mBitmap.getHeight(), matrix, true);
+                        } else {
+                            mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
+                                    mBitmap.getHeight());
+                        }
+
+                        if (!decodedBitmap.equals(mBitmap)) {
+                            decodedBitmap.recycle();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-                Matrix matrix = new Matrix();
-                Bitmap decodedBitmap = mBitmap;
-                if (orientation > 0) {
-                    matrix.postRotate(orientation);
-                    mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
-                            mBitmap.getHeight(), matrix, true);
-                } else {
-                    mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
-                            mBitmap.getHeight());
-                }
-
-                if (!decodedBitmap.equals(mBitmap)) {
-                    decodedBitmap.recycle();
                 }
             }
         } catch (Exception e) {

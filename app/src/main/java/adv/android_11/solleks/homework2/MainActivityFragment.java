@@ -65,7 +65,6 @@ public class MainActivityFragment extends Fragment {
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
                              final Bundle savedInstanceState) {
         setRetainInstance(true);
-
         View view = inflater.inflate(R.layout.fragment_gallery, container, false);
         gridView = (GridView)view.findViewById(R.id.gridView);
 

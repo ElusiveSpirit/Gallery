@@ -11,11 +11,13 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Created by Константин on 07.11.2015.
@@ -73,14 +75,18 @@ public class MainMenuFragment extends Fragment {
                 return (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png"));
             }
         });
-        if (imageList.length > 0) {
-            data.add(imageList[imageList.length - 1].getAbsolutePath());
+
+        ArrayList<File> fileList = new ArrayList<>();
+        fileList.addAll(Arrays.asList(imageList));
+        fileList = sort(fileList);
+        if (fileList.size() > 0) {
+            data.add(fileList.get(fileList.size() - 1).getAbsolutePath());
         }
         for (File dir : dirList) {
             String subDirs[] = dir.getAbsolutePath().split("/");
             boolean contains = false;
-            for (int i = 0; i < subDirs.length; i++)
-                if (subDirs[i].equals("Music")) {
+            for (String subDir : subDirs)
+                if (subDir.equals("Music")) {
                     contains = true;
                     break;
                 }
@@ -89,6 +95,30 @@ public class MainMenuFragment extends Fragment {
         }
 
         return data;
+    }
+
+    public ArrayList<File> sort(ArrayList<File> input) {
+        if (input.size() == 0) {
+            return input;
+        }
+        File head = input.get(0);
+        input.remove(0);
+        ArrayList<File> right = new ArrayList<>(input.size()/2);
+        ArrayList<File> left = new ArrayList<>(input.size()/2);
+
+        for(File element: input) {
+            if (element.lastModified() > head.lastModified()) {
+                right.add(element);
+            } else {
+                left.add(element);
+            }
+        }
+
+        ArrayList<File> result = new ArrayList<>(input.size());
+        result.addAll(sort(left));
+        result.add(head);
+        result.addAll(sort(right));
+        return result;
     }
 
     @Override
@@ -143,9 +173,10 @@ public class MainMenuFragment extends Fragment {
             ViewHolder holder;
 
             if (convertView == null) {
-                convertView = mInflater.inflate(R.layout.list_item_main, parent, false);
+                convertView = mInflater.inflate(R.layout.list_item_main_menu, parent, false);
                 holder = new ViewHolder();
-                holder.imageView = (ImageView) convertView.findViewById(R.id.imageView);
+                holder.imageView = (ImageView) convertView.findViewById(R.id.imageMainView);
+                holder.textView = (TextView) convertView.findViewById(R.id.textMainView);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -154,6 +185,7 @@ public class MainMenuFragment extends Fragment {
             Image image = (Image)getItem(position);
             try {
                 holder.imageView.setImageBitmap(image.getBitmap());
+                holder.textView.setText(image.getFileDir());
             } catch (Exception e) {
                 holder.imageView.setImageBitmap(null);
             }
@@ -164,6 +196,7 @@ public class MainMenuFragment extends Fragment {
 
         class ViewHolder {
             public ImageView imageView;
+            public TextView textView;
         }
     }
 }

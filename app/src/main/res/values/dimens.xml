@@ -5,6 +5,6 @@
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="image_width">130dp</dimen>
     <dimen name="image_height">130dp</dimen>
-    <dimen name="preview_image_width">245dp</dimen>
-    <dimen name="preview_image_height">245dp</dimen>
+    <dimen name="preview_image_width">200dp</dimen>
+    <dimen name="preview_image_height">200dp</dimen>
 </resources>
