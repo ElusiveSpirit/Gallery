@@ -15,7 +15,6 @@ import android.widget.ImageView;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.Stack;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -24,6 +23,7 @@ public class GalleryFragment extends Fragment {
 
     public static int IMAGE_WIDTH;
     public static int IMAGE_HEIGHT;
+    public static final String TAG = "adv.android_11.solleks.homework2.GalleryFragment";
 
     private GalleryAdapter galleryAdapter;
     private GridView gridView;
@@ -33,7 +33,7 @@ public class GalleryFragment extends Fragment {
     private boolean mSliding;
 
     private Image[] data = new Image[0];
-    private Stack<Integer> freeBitmapsID;
+    //private Stack<Integer> freeBitmapsID;
 
     private String path;
 
@@ -64,10 +64,7 @@ public class GalleryFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        freeBitmapsID = new Stack<>();
-
-        if (path != null)
-            reLoadData(new File(path));
+        //freeBitmapsID = new Stack<>();
 
         // Создание кеша
         final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
@@ -226,7 +223,7 @@ public class GalleryFragment extends Fragment {
     }
 
     public interface OnDetailFragmentListener {
-        public void onDetailFragmentOpener(String fileName);
+        void onDetailFragmentOpener(String fileName);
     }
 
 }

@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
-import java.io.File;
 
 /**
  * Created by Константин on 10.11.2015.
@@ -16,12 +15,11 @@ import java.io.File;
  */
 public class DetailFragment extends Fragment {
 
-    private File imageFile;
+    public static final String TAG = "adv.android_11.solleks.homework2.DetailFragment";
+
     private ImageView mImageView;
     private Loader loader;
-
-    private int width;
-    private int height;
+    private Image image;
 
     public void setImageFile(String imageFile) {
         loader = new Loader();
@@ -31,7 +29,7 @@ public class DetailFragment extends Fragment {
     class Loader extends AsyncTask<String, Void, Image> {
         @Override
         protected Image doInBackground(String... params) {
-            Image image = new Image(params[0]);
+            image = new Image(params[0]);
             image.setDimens(MainActivity.getDisplayWidth(), MainActivity.getDisplayHeight());
             image.run();
             while (image.isAlive())
@@ -46,15 +44,18 @@ public class DetailFragment extends Fragment {
         }
     }
 
+    public void cancelLoading() {
+        loader.cancel(true);
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        setRetainInstance(true);
         View view = inflater.inflate(R.layout.fragment_item, container, false);
 
         mImageView = (ImageView) view.findViewById(R.id.imageViewDetail);
-        this.width = mImageView.getWidth();
-        this.height = mImageView.getHeight();
-
-        //this.width =
+        if (image != null)
+            mImageView.setImageBitmap(image.getBitmap());
 
         return view;
     }

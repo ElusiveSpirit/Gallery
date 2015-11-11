@@ -15,9 +15,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /**
  * Created by Константин on 07.11.2015.
@@ -27,14 +25,22 @@ public class MainFragment extends Fragment {
 
     public static int IMAGE_WIDTH;
     public static int IMAGE_HEIGHT;
+    public static final String DATA_KEY = "adv.android_11.solleks.homework2.MainFragment.DATA_KEY";
+    public static final String TAG = "adv.android_11.solleks.homework2.MainFragment";
 
     private ArrayList<String> data;
     private Image[] dataImage;
-    private File file;
     private GalleryAdapter galleryAdapter;
 
     private OnFragmentInteractionListener mListener;
 
+    public static MainFragment newInstance(ArrayList<String> data) {
+        MainFragment mainFragment = new MainFragment();
+        Bundle args = new Bundle();
+        args.putStringArrayList(DATA_KEY, data);
+        mainFragment.setArguments(args);
+        return mainFragment;
+    }
 
     @Override
     public void onAttach(Context context) {
@@ -57,12 +63,15 @@ public class MainFragment extends Fragment {
         setRetainInstance(true);
 
         File rootSD = Environment.getExternalStorageDirectory();
-        file = rootSD;
-        data = saveFilesFromDir(rootSD);
-        dataImage = new Image[data.size()];
-        for (int i = 0; i < data.size(); i++) {
-            dataImage[i] = new Image(data.get(i), i, null);
-            dataImage[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
+        data = getArguments().getStringArrayList(DATA_KEY);
+        if (data != null) {
+            dataImage = new Image[data.size()];
+            for (int i = 0; i < data.size(); i++) {
+                dataImage[i] = new Image(data.get(i), i, null);
+                dataImage[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
+            }
+        } else {
+            dataImage = new Image[0];
         }
         ImageLoader imageLoader = new ImageLoader();
         imageLoader.execute(rootSD);
@@ -85,64 +94,7 @@ public class MainFragment extends Fragment {
         }
     }
 
-    public ArrayList<String> saveFilesFromDir(File rootDir) {
-        ArrayList<String> data = new ArrayList<>();
 
-        File[] dirList = rootDir.listFiles(new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                return (!name.contains("."));
-            }
-        });
-        File[] imageList = rootDir.listFiles(new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                return (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png"));
-            }
-        });
-
-        ArrayList<File> fileList = new ArrayList<>();
-        fileList.addAll(Arrays.asList(imageList));
-        fileList = sort(fileList);
-        if (fileList.size() > 0) {
-            data.add(fileList.get(fileList.size() - 1).getAbsolutePath());
-        }
-        for (File dir : dirList) {
-            String subDirs[] = dir.getAbsolutePath().split("/");
-            boolean contains = false;
-            for (String subDir : subDirs)
-                if (subDir.equals("Music")) {
-                    contains = true;
-                    break;
-                }
-            if (!contains)
-            data.addAll(saveFilesFromDir(dir));
-        }
-
-        return data;
-    }
-
-    public ArrayList<File> sort(ArrayList<File> input) {
-        if (input.size() == 0) {
-            return input;
-        }
-        File head = input.get(0);
-        input.remove(0);
-        ArrayList<File> right = new ArrayList<>(input.size()/2);
-        ArrayList<File> left = new ArrayList<>(input.size()/2);
-
-        for(File element: input) {
-            if (element.lastModified() > head.lastModified()) {
-                right.add(element);
-            } else {
-                left.add(element);
-            }
-        }
-
-        ArrayList<File> result = new ArrayList<>(input.size());
-        result.addAll(sort(left));
-        result.add(head);
-        result.addAll(sort(right));
-        return result;
-    }
 
     @Override
     public View onCreateView(final LayoutInflater inflater, final ViewGroup container,
@@ -225,6 +177,6 @@ public class MainFragment extends Fragment {
     }
 
     public interface OnFragmentInteractionListener {
-        public void onFragmentInteraction(String fileName);
+        void onFragmentInteraction(String fileName);
     }
 }
