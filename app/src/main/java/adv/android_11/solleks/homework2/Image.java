@@ -17,6 +17,7 @@ import android.media.ExifInterface;
     private String mImageFile;
     private int mImageID;
     private MemoryCache mMemoryCache;
+    private boolean reUseBitmap;
 
     Image() {
         mImageID = 0;
@@ -24,6 +25,7 @@ import android.media.ExifInterface;
         mBitmap = null;
         width = GalleryFragment.IMAGE_WIDTH;
         height = GalleryFragment.IMAGE_HEIGHT;
+        reUseBitmap = false;
     }
 
     Image(String imageFile) {
@@ -32,6 +34,7 @@ import android.media.ExifInterface;
         mBitmap = null;
         width = GalleryFragment.IMAGE_WIDTH;
         height = GalleryFragment.IMAGE_HEIGHT;
+        reUseBitmap = false;
     }
 
     Image(String imageFile, int image, MemoryCache cache) {
@@ -41,9 +44,15 @@ import android.media.ExifInterface;
         mMemoryCache = cache;
         width = GalleryFragment.IMAGE_WIDTH;
         height = GalleryFragment.IMAGE_HEIGHT;
+        reUseBitmap = false;
     }
 
-    public Bitmap getBitmap() { return mBitmap; }
+    public Bitmap getBitmap() {
+        if (reUseBitmap)
+            return null;
+        else
+            return mBitmap;
+    }
 
     public int getImageID() {
         return mImageID;
@@ -85,70 +94,105 @@ import android.media.ExifInterface;
         this.mImageFile = ImageFile;
     }
 
+    public void setReUseBitmap(boolean reUseBitmap) {
+        this.reUseBitmap = reUseBitmap;
+    }
+
     @Override
     public void run(){
-        // TODO Производить перезагрузку новых битмапов здесь, а не в удалении
+        // TODO Настроить сохранение отформатированных битмапов в файл и их вызов
         Bitmap bitmap = null;// mMemoryCache.getBitmapFromMemoryCache(mImageFile);
 
-        try {
-            if (bitmap == null && mBitmap == null) {
-                mBitmap = decodeSampledBitmapFromFile(mImageFile, this.width, this.height);
+        if (mBitmap == null || reUseBitmap) {
+            try {
+                if (bitmap == null && mImageFile != null) {
+                    if (mBitmap == null)
+                        mBitmap = decodeSampledBitmapFromFile(mImageFile, this.width, this.height);
+                    else if (reUseBitmap) {
+                        // TODO Разобраться с ошибкой при переиспользовании старого битмапа
+                      /*  mBitmap = decodeSampledBitmapFromFile(mImageFile, this.width, this.height, mBitmap);
+                        reUseBitmap = false;
+                        if (mBitmap == null)*/
+                        mBitmap = decodeSampledBitmapFromFile(mImageFile, this.width, this.height);
+                        reUseBitmap = false;
+                    }
 
-                if (mBitmap != null) {
-                    try {
-                        int orientation = 0;
-                        try {
-                            ExifInterface exif = new ExifInterface(mImageFile);
-                            orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, -1);
-                            switch (orientation) {
-                                case ExifInterface.ORIENTATION_ROTATE_270:
-                                    orientation = 270;
-                                    break;
-                                case ExifInterface.ORIENTATION_ROTATE_180:
-                                    orientation = 180;
-                                    break;
-                                case ExifInterface.ORIENTATION_ROTATE_90:
-                                    orientation = 90;
-                                    break;
-                                case ExifInterface.ORIENTATION_NORMAL:
-                                    orientation = 0;
-                                    break;
-                                default:
-                                    orientation = -1;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                        Matrix matrix = new Matrix();
-                        Bitmap decodedBitmap = mBitmap;
-                        if (orientation > 0) {
-                            matrix.postRotate(orientation);
-                            if (this.width == this.height)
-                                mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
-                                        mBitmap.getHeight(), matrix, true);
-                            else
-                                mBitmap = Bitmap.createBitmap(decodedBitmap, 0, 0, mBitmap.getWidth(),
-                                        mBitmap.getHeight(), matrix, true);
-                        } else if (this.width == this.height) {
-                            mBitmap = Bitmap.createBitmap(decodedBitmap, (mBitmap.getWidth() - mBitmap.getHeight()) / 2, 0, mBitmap.getHeight(),
-                                    mBitmap.getHeight());
-                        } else {
-                            mBitmap = Bitmap.createBitmap(decodedBitmap, 0, 0, mBitmap.getWidth(),
-                                    mBitmap.getHeight());
-                        }
-
-                        if (!decodedBitmap.equals(mBitmap)) {
-                            decodedBitmap.recycle();
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                    if (mBitmap != null) {
+                        mBitmap = convertBitmap(mBitmap, mImageFile);
                     }
                 }
+            } catch (Exception e) {
+                mBitmap = null;
             }
-        } catch (Exception e) {
-            mBitmap = null;
         }
+    }
+
+    public Bitmap convertBitmap(Bitmap bitmap, String fileName) {
+        try {
+            int orientation = 0;
+            try {
+                ExifInterface exif = new ExifInterface(fileName);
+                orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, -1);
+                switch (orientation) {
+                    case ExifInterface.ORIENTATION_ROTATE_270:
+                        orientation = 270;
+                        break;
+                    case ExifInterface.ORIENTATION_ROTATE_180:
+                        orientation = 180;
+                        break;
+                    case ExifInterface.ORIENTATION_ROTATE_90:
+                        orientation = 90;
+                        break;
+                    case ExifInterface.ORIENTATION_NORMAL:
+                        orientation = 0;
+                        break;
+                    default:
+                        orientation = -1;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            Matrix matrix = new Matrix();
+            Bitmap decodedBitmap = bitmap;
+            if (orientation > 0) {
+                matrix.postRotate(orientation);
+                if (this.width == this.height)
+                    bitmap = Bitmap.createBitmap(decodedBitmap, (bitmap.getWidth() - bitmap.getHeight()) / 2, 0, bitmap.getHeight(),
+                            bitmap.getHeight(), matrix, true);
+                else
+                    bitmap = Bitmap.createBitmap(decodedBitmap, 0, 0, bitmap.getWidth(),
+                            bitmap.getHeight(), matrix, true);
+            } else if (this.width == this.height) {
+                if (bitmap.getWidth() == bitmap.getHeight())
+                    bitmap = Bitmap.createBitmap(decodedBitmap, 0, 0, bitmap.getHeight(),
+                        bitmap.getHeight());
+                else if (bitmap.getWidth() > bitmap.getHeight())
+                    bitmap = Bitmap.createBitmap(decodedBitmap, (bitmap.getWidth() - bitmap.getHeight()) / 2, 0,
+                            bitmap.getHeight(),
+                            bitmap.getHeight());
+                else
+                    bitmap = Bitmap.createBitmap(decodedBitmap, 0, (bitmap.getHeight() - bitmap.getWidth()) / 2,
+                            bitmap.getWidth(),
+                            bitmap.getWidth());
+            } else {
+                bitmap = Bitmap.createBitmap(decodedBitmap, 0, 0, bitmap.getWidth(),
+                        bitmap.getHeight());
+            }
+
+            if (!decodedBitmap.equals(bitmap)) {
+                decodedBitmap.recycle();
+            }
+
+            return bitmap;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void recycleBitmap() {
+        if (mBitmap != null)
+            mBitmap.recycle();
     }
 
     public Bitmap decodeSampledBitmapFromFile(String file, int width, int height) {

@@ -1,6 +1,7 @@
 package adv.android_11.solleks.homework2;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -15,10 +16,9 @@ import android.widget.ImageView;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.util.Stack;
 
-/**
- * A placeholder fragment containing a simple view.
- */
+
 public class GalleryFragment extends Fragment {
 
     public static int IMAGE_WIDTH;
@@ -33,7 +33,7 @@ public class GalleryFragment extends Fragment {
     private boolean mSliding;
 
     private Image[] data = new Image[0];
-    //private Stack<Integer> freeBitmapsID;
+    private Stack<Bitmap> mFreeBitmaps;
 
     private String path;
 
@@ -41,9 +41,18 @@ public class GalleryFragment extends Fragment {
 
     public void changePath(String path) {
         this.path = path;
+        // Удаление предыдущих данных
+
+        for (Image image : data) {
+            if (image.getBitmap() != null)
+                mFreeBitmaps.push(image.getBitmap());
+        }
+
         if (gridView != null)
             gridView.setSelection(0);
         reLoadData(new File(path));
+        // Запуск обновления нового контента
+        mSliding = true;
     }
 
     @Override
@@ -64,7 +73,7 @@ public class GalleryFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //freeBitmapsID = new Stack<>();
+        mFreeBitmaps = new Stack<>();
 
         // Создание кеша
         final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
@@ -83,8 +92,30 @@ public class GalleryFragment extends Fragment {
         data = new Image[imageList.length];
         for (int i = 0; i < imageList.length; i++) {
             data[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
+            if (!mFreeBitmaps.empty()) {
+                data[i].setBitmap(mFreeBitmaps.pop());
+                data[i].setReUseBitmap(true);
+            }
             data[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
         }
+        /* else {
+            // Если уже существует массив с битмапами, используем его еще раз
+            int length = imageList.length > data.length ? data.length : imageList.length;
+            for (int i = 0; i < length; i++) {
+                data[i].setImageFile(imageList[i].getPath());
+                data[i].setReUseBitmap(true);
+            }
+            for (int i = length; i < data.length; i++) {
+                data[i].recycleBitmap();
+            }
+            Image[] tempData = new Image[imageList.length];
+            System.arraycopy(data, 0, tempData, 0, length);
+            for (int i = length; i < imageList.length; i++) {
+                tempData[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
+                tempData[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
+            }
+            data = tempData;
+        }*/
     }
 
     @Override
@@ -143,6 +174,11 @@ public class GalleryFragment extends Fragment {
             } catch (NullPointerException e) {
                 e.printStackTrace();
             }
+        }
+
+        public void cancelLoading() {
+            if (imageLoader != null)
+                imageLoader.cancel(true);
         }
 
         @Override
@@ -208,6 +244,10 @@ public class GalleryFragment extends Fragment {
                 }
             }
 
+            while (data[firstFile + visibleFiles - 1].isAlive())
+                Thread.yield();
+            this.publishProgress();
+
             return null;
         }
 
@@ -216,6 +256,12 @@ public class GalleryFragment extends Fragment {
             super.onProgressUpdate(values);
             galleryAdapter.notifyDataSetChanged();
         }
+    }
+
+    // Метод, предназванченный для вызова при нажатии кнопки назад
+    public void cancelLoading() {
+        if (galleryAdapter != null)
+            galleryAdapter.cancelLoading();
     }
 
     public String getOpenedDir() {

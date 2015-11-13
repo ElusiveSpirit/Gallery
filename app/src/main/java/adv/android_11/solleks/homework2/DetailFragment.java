@@ -22,6 +22,7 @@ public class DetailFragment extends Fragment {
     private Image image;
 
     public void setImageFile(String imageFile) {
+        mImageView.setImageDrawable(null);
         loader = new Loader();
         loader.execute(imageFile);
     }
@@ -44,6 +45,7 @@ public class DetailFragment extends Fragment {
         }
     }
 
+    // Метод, предназванченный для вызова при нажатии кнопки назад
     public void cancelLoading() {
         loader.cancel(true);
     }

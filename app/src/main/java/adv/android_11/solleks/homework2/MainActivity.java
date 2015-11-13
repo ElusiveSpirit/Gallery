@@ -42,8 +42,8 @@ public class MainActivity extends AppCompatActivity
 
         FragmentManager manager = getSupportFragmentManager();
         List<Fragment> fragments = manager.getFragments();
-        // TODO Найти: куда при загадочных обстоятельствах исчезет фрагмент
-        Fragment fragment1 = manager.findFragmentByTag(DetailFragment.TAG);
+
+
         if (fragments == null) {
             MainFragment.IMAGE_HEIGHT = MainFragment.IMAGE_WIDTH = getResources().getDimensionPixelOffset(R.dimen.preview_image_height);
 
@@ -171,6 +171,10 @@ public class MainActivity extends AppCompatActivity
             FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
             fragmentTransaction
                     .add(R.id.fragmentContainer, mainFragment, MainFragment.TAG)
+                    .add(R.id.fragmentContainer, galleryFragment, GalleryFragment.TAG)
+                    .add(R.id.fragmentContainer, detailFragment, DetailFragment.TAG)
+                    .hide(galleryFragment)
+                    .hide(detailFragment)
                     .addToBackStack(null)
                     .commit();
             mLastFragmentRunning = MainFragment.TAG;
@@ -240,14 +244,10 @@ public class MainActivity extends AppCompatActivity
     public void onBackPressed() {
         android.support.v4.app.FragmentManager manager = getSupportFragmentManager();
 
-        List<Fragment> list = manager.getFragments();
-
         if (manager.findFragmentByTag(MainFragment.TAG).isVisible()) {
             finish();
         } else if (manager.findFragmentByTag(GalleryFragment.TAG).isVisible()) {
-          /*  getSupportFragmentManager().beginTransaction()
-                    .attach(galleryFragment)
-                    .commit();*/
+            galleryFragment.cancelLoading();
         } else if (manager.findFragmentByTag(DetailFragment.TAG).isVisible()) {
             detailFragment.cancelLoading();
         }
