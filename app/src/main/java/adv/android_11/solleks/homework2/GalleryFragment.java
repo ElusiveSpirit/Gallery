@@ -2,6 +2,7 @@ package adv.android_11.solleks.homework2;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -16,6 +17,8 @@ import android.widget.ImageView;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Stack;
 
 
@@ -32,18 +35,22 @@ public class GalleryFragment extends Fragment {
     private MemoryCache mMemoryCache;
     private boolean mSliding;
 
-    private Image[] data = new Image[0];
+    private Image[] mData = new Image[0];
     private Stack<Bitmap> mFreeBitmaps;
 
-    private String path;
+    private String mPath;
+
+    // Переменные для мультивыбора
+    private HashSet<Integer> mSelectedItems;
+    private boolean mIsNowSelecting;
 
     private OnDetailFragmentListener onDetailFragmentListener;
 
     public void changePath(String path) {
-        this.path = path;
+        this.mPath = path;
         // Удаление предыдущих данных
 
-        for (Image image : data) {
+        for (Image image : mData) {
             if (image.getBitmap() != null)
                 mFreeBitmaps.push(image.getBitmap());
         }
@@ -74,6 +81,7 @@ public class GalleryFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mFreeBitmaps = new Stack<>();
+        mSelectedItems = new HashSet<>();
 
         // Создание кеша
         final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
@@ -89,32 +97,32 @@ public class GalleryFragment extends Fragment {
             }
         });
 
-        data = new Image[imageList.length];
+        mData = new Image[imageList.length];
         for (int i = 0; i < imageList.length; i++) {
-            data[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
+            mData[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
             if (!mFreeBitmaps.empty()) {
-                data[i].setBitmap(mFreeBitmaps.pop());
-                data[i].setReUseBitmap(true);
+                mData[i].setBitmap(mFreeBitmaps.pop());
+                mData[i].setReUseBitmap(true);
             }
-            data[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
+            mData[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
         }
         /* else {
             // Если уже существует массив с битмапами, используем его еще раз
-            int length = imageList.length > data.length ? data.length : imageList.length;
+            int length = imageList.length > mData.length ? mData.length : imageList.length;
             for (int i = 0; i < length; i++) {
-                data[i].setImageFile(imageList[i].getPath());
-                data[i].setReUseBitmap(true);
+                mData[i].setImageFile(imageList[i].getPath());
+                mData[i].setReUseBitmap(true);
             }
-            for (int i = length; i < data.length; i++) {
-                data[i].recycleBitmap();
+            for (int i = length; i < mData.length; i++) {
+                mData[i].recycleBitmap();
             }
             Image[] tempData = new Image[imageList.length];
-            System.arraycopy(data, 0, tempData, 0, length);
+            System.arraycopy(mData, 0, tempData, 0, length);
             for (int i = length; i < imageList.length; i++) {
                 tempData[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
                 tempData[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
             }
-            data = tempData;
+            mData = tempData;
         }*/
     }
 
@@ -146,7 +154,38 @@ public class GalleryFragment extends Fragment {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                openGalleryFragment(((Image)galleryAdapter.getItem(position)).getFile());
+                if (mIsNowSelecting) {
+                    if (mSelectedItems.contains(position)) {
+                        mSelectedItems.remove(position);
+                        if (mSelectedItems.size() == 0)
+                            mIsNowSelecting = false;
+                    }
+                    else
+                        mSelectedItems.add(position);
+                    galleryAdapter.notifyDataSetChanged();
+                } else
+                    openGalleryFragment(((Image) galleryAdapter.getItem(position)).getFileName());
+            }
+        });
+        gridView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mIsNowSelecting) {
+                    if (mSelectedItems.contains(position)) {
+                        mSelectedItems.remove(position);
+                        if (mSelectedItems.size() == 0)
+                            mIsNowSelecting = false;
+                    }
+                    else
+                        mSelectedItems.add(position);
+                    galleryAdapter.notifyDataSetChanged();
+                    return false;
+                } else {
+                    mIsNowSelecting = true;
+                    mSelectedItems.add(position);
+                    galleryAdapter.notifyDataSetChanged();
+                    return true;
+                }
             }
         });
 
@@ -183,17 +222,17 @@ public class GalleryFragment extends Fragment {
 
         @Override
         public int getCount() {
-            return data.length;
+            return mData.length;
         }
 
         @Override
         public Object getItem(int position) {
-            return data[position];
+            return mData[position];
         }
 
         @Override
         public long getItemId(int position) {
-            return data[position].getImageID();
+            return mData[position].getImageID();
         }
 
         public View getView(int position, View convertView, ViewGroup parent) {
@@ -210,8 +249,18 @@ public class GalleryFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
-            holder.imageView.setMaxHeight(holder.imageView.getWidth());
-            holder.imageView.setImageBitmap(image.getBitmap());
+            if (image.getBitmap() != null && !image.getBitmap().isRecycled())
+                holder.imageView.setImageBitmap(image.getBitmap());
+            else
+                holder.imageView.setImageBitmap(null);
+
+            if (mIsNowSelecting && mSelectedItems.contains(position)) {
+                holder.imageView.setPadding(5, 5, 5, 5);
+                holder.imageView.setBackgroundColor(Color.argb(255, 255, 158, 84));
+            } else {
+                holder.imageView.setPadding(0,0,0,0);
+                holder.imageView.setBackgroundColor(Color.LTGRAY);
+            }
 
             return convertView;
         }
@@ -234,17 +283,17 @@ public class GalleryFragment extends Fragment {
             for (int i = firstFile; i < firstFile + visibleFiles; i++) {
                 if (isCancelled()) return null;
 
-                data[i].run();
+                mData[i].run();
 
                 for (int j = loadedFile; j <= i; j++) {
-                    if (!data[j].isAlive() && data[j].getBitmap() != null) {
+                    if (!mData[j].isAlive() && mData[j].getBitmap() != null) {
                         loadedFile = j;
                         this.publishProgress();
                     }
                 }
             }
 
-            while (data[firstFile + visibleFiles - 1].isAlive())
+            while (mData[firstFile + visibleFiles - 1].isAlive())
                 Thread.yield();
             this.publishProgress();
 
@@ -258,6 +307,27 @@ public class GalleryFragment extends Fragment {
         }
     }
 
+    public boolean isIsNowSelecting() {
+        return mIsNowSelecting;
+    }
+
+    public void cancelSelecting() {
+        mIsNowSelecting = false;
+        mSelectedItems.clear();
+        galleryAdapter.notifyDataSetChanged();
+    }
+
+    public File[] getSelectedFiles() {
+        File[] files = new File[mSelectedItems.size()];
+
+        Iterator<Integer> iterator = mSelectedItems.iterator();
+        int i = 0;
+        while (iterator.hasNext()) {
+            files[i++] = new File(mData[iterator.next()].getFileName());
+        }
+        return files;
+    }
+
     // Метод, предназванченный для вызова при нажатии кнопки назад
     public void cancelLoading() {
         if (galleryAdapter != null)
@@ -265,11 +335,12 @@ public class GalleryFragment extends Fragment {
     }
 
     public String getOpenedDir() {
-        return path;
+        return mPath;
     }
 
     public interface OnDetailFragmentListener {
         void onDetailFragmentOpener(String fileName);
+        void onItemMove(HashSet<Integer> items);
     }
 
 }

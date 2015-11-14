@@ -58,11 +58,11 @@ import android.media.ExifInterface;
         return mImageID;
     }
 
-    public String getFile() {
+    public String getFileName() {
         return mImageFile;
     }
 
-    public String getFileDir() {
+    public String getFileDirName() {
         String s[] = mImageFile.split("/");
         if (s.length > 2)
             return s[s.length - 2];

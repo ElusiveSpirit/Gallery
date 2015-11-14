@@ -13,6 +13,7 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -32,6 +33,9 @@ public class MainFragment extends Fragment {
     private Image[] dataImage;
     private GalleryAdapter galleryAdapter;
 
+    private boolean mSelectDirToMove;
+    private File[] mFilesToMove;
+
     private OnFragmentInteractionListener mListener;
 
     public static MainFragment newInstance(ArrayList<String> data) {
@@ -40,6 +44,28 @@ public class MainFragment extends Fragment {
         args.putStringArrayList(DATA_KEY, data);
         mainFragment.setArguments(args);
         return mainFragment;
+    }
+
+    public void setSelectDirToMove(File[] files) {
+        mSelectDirToMove = true;
+        mFilesToMove = files;
+    }
+
+    public void setData(ArrayList<String> data) {
+        this.data = data;
+        File rootSD = Environment.getExternalStorageDirectory();
+
+        if (data != null) {
+            dataImage = new Image[data.size()];
+            for (int i = 0; i < data.size(); i++) {
+                dataImage[i] = new Image(data.get(i), i, null);
+                dataImage[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
+            }
+        } else {
+            dataImage = new Image[0];
+        }
+        ImageLoader imageLoader = new ImageLoader();
+        imageLoader.execute(rootSD);
     }
 
     @Override
@@ -57,24 +83,23 @@ public class MainFragment extends Fragment {
         mListener.onFragmentInteraction(fileName);
     }
 
+    public void upDateData() {
+        // TODO Выполнять перезагрузку только для двух папок
+        dataImage = new Image[0];
+        galleryAdapter.notifyDataSetChanged();
+
+        mListener.upDateFragment();
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
 
-        File rootSD = Environment.getExternalStorageDirectory();
+        mSelectDirToMove = false;
+
         data = getArguments().getStringArrayList(DATA_KEY);
-        if (data != null) {
-            dataImage = new Image[data.size()];
-            for (int i = 0; i < data.size(); i++) {
-                dataImage[i] = new Image(data.get(i), i, null);
-                dataImage[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
-            }
-        } else {
-            dataImage = new Image[0];
-        }
-        ImageLoader imageLoader = new ImageLoader();
-        imageLoader.execute(rootSD);
+        setData(data);
     }
 
     class ImageLoader extends AsyncTask<File, Void, Void> {
@@ -107,8 +132,16 @@ public class MainFragment extends Fragment {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                openGalleryFragment(((Image) galleryAdapter.getItem(position)).getFilePath());
-               // Toast.makeText(inflater.getContext(), ((Image)galleryAdapter.getItem(position)).getFile(), Toast.LENGTH_SHORT).show();
+                if (mSelectDirToMove) {
+                    mSelectDirToMove = false;
+                    Image image = ((Image) galleryAdapter.getItem(position));
+                    for (File file : mFilesToMove) {
+                        file.renameTo(new File(image.getFilePath() + "/" + file.getName()));
+                    }
+                    Toast.makeText(inflater.getContext(), "Файлы успешно перемещены", Toast.LENGTH_SHORT).show();
+                    upDateData();
+                } else
+                    openGalleryFragment(((Image) galleryAdapter.getItem(position)).getFilePath());
             }
         });
         return view;
@@ -161,7 +194,7 @@ public class MainFragment extends Fragment {
             Image image = (Image)getItem(position);
             try {
                 holder.imageView.setImageBitmap(image.getBitmap());
-                holder.textView.setText(image.getFileDir());
+                holder.textView.setText(image.getFileDirName());
             } catch (Exception e) {
                 holder.imageView.setImageBitmap(null);
             }
@@ -178,5 +211,6 @@ public class MainFragment extends Fragment {
 
     public interface OnFragmentInteractionListener {
         void onFragmentInteraction(String fileName);
+        void upDateFragment();
     }
 }

@@ -10,20 +10,19 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity
         implements
             MainFragment.OnFragmentInteractionListener,
             GalleryFragment.OnDetailFragmentListener{
-
-    private static final String RUNNING_FRAGMENT = "adv.android_11.solleks.homework2.MainActivity.RUNNING_FRAGMENT";
-    private String mLastFragmentRunning;
 
     private MainFragment mainFragment;
     private GalleryFragment galleryFragment;
@@ -92,8 +91,12 @@ public class MainActivity extends AppCompatActivity
         int id = item.getItemId();
 
        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch (id) {
+            case R.id.action_settings :
+                return true;
+            case R.id.action_move :
+                moveItem();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -119,6 +122,7 @@ public class MainActivity extends AppCompatActivity
             galleryFragment.changePath(fileName);
     }
 
+
     @Override
     public void onDetailFragmentOpener(String fileName) {
         FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
@@ -140,6 +144,23 @@ public class MainActivity extends AppCompatActivity
         detailFragment.setImageFile(fileName);
     }
 
+    @Override
+    public void onItemMove(HashSet<Integer> items) {
+
+    }
+
+    @Override
+    public void upDateFragment() {
+        new DirLoader().execute(Environment.getExternalStorageDirectory());
+    }
+
+    public void moveItem() {
+        File[] files = galleryFragment.getSelectedFiles();
+        galleryFragment.cancelSelecting();
+        mainFragment.setSelectDirToMove(files);
+        onBackPressed();
+    }
+
     public static int getDisplayWidth() {
         return DisplayWidth;
     }
@@ -152,32 +173,37 @@ public class MainActivity extends AppCompatActivity
         @Override
         protected ArrayList<String> doInBackground(File... params) {
 
-
             File rootDir = params[0];
 
+            publishProgress(new Image());
             return saveFilesFromDir(rootDir);
         }
 
         @Override
         protected void onProgressUpdate(Image... values) {
             super.onProgressUpdate(values);
+            Toast.makeText(MainActivity.this, "Загрузка файлов", Toast.LENGTH_SHORT).show();
         }
 
         @Override
         protected void onPostExecute(ArrayList<String> strings) {
             super.onPostExecute(strings);
-            mainFragment = MainFragment.newInstance(strings);
 
-            FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-            fragmentTransaction
-                    .add(R.id.fragmentContainer, mainFragment, MainFragment.TAG)
-                    .add(R.id.fragmentContainer, galleryFragment, GalleryFragment.TAG)
-                    .add(R.id.fragmentContainer, detailFragment, DetailFragment.TAG)
-                    .hide(galleryFragment)
-                    .hide(detailFragment)
-                    .addToBackStack(null)
-                    .commit();
-            mLastFragmentRunning = MainFragment.TAG;
+            if (mainFragment == null) {
+                mainFragment = MainFragment.newInstance(strings);
+
+                FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+                fragmentTransaction
+                        .add(R.id.fragmentContainer, mainFragment, MainFragment.TAG)
+                        .add(R.id.fragmentContainer, galleryFragment, GalleryFragment.TAG)
+                        .add(R.id.fragmentContainer, detailFragment, DetailFragment.TAG)
+                        .hide(galleryFragment)
+                        .hide(detailFragment)
+                        .addToBackStack(null)
+                        .commit();
+            } else {
+                mainFragment.setData(strings);
+            }
         }
 
         public ArrayList<String> saveFilesFromDir(File rootDir) {
@@ -247,6 +273,10 @@ public class MainActivity extends AppCompatActivity
         if (manager.findFragmentByTag(MainFragment.TAG).isVisible()) {
             finish();
         } else if (manager.findFragmentByTag(GalleryFragment.TAG).isVisible()) {
+            if (galleryFragment.isIsNowSelecting()) {
+                galleryFragment.cancelSelecting();
+                return;
+            }
             galleryFragment.cancelLoading();
         } else if (manager.findFragmentByTag(DetailFragment.TAG).isVisible()) {
             detailFragment.cancelLoading();
