@@ -83,12 +83,38 @@ public class MainFragment extends Fragment {
         mListener.onFragmentInteraction(fileName);
     }
 
-    public void upDateData() {
-        // TODO Выполнять перезагрузку только для двух папок
-        dataImage = new Image[0];
-        galleryAdapter.notifyDataSetChanged();
+    public void upDateData(final int originalPath, final int newPath) {
 
-        mListener.upDateFragment();
+        ArrayList<String> originalFile = MainActivity.saveFilesFromDir(new File(dataImage[originalPath].getFilePath()));
+        ArrayList<String> newFile = MainActivity.saveFilesFromDir(new File(dataImage[newPath].getFilePath()));
+
+        if (originalFile != null && originalFile.size() > 0)
+            dataImage[originalPath].setImageFile(originalFile.get(0));
+        if (newFile != null && newFile.size() > 0)
+            dataImage[newPath].setImageFile(newFile.get(0));
+
+        new AsyncTask<Void, Void, Void>(){
+            @Override
+            protected Void doInBackground(Void... params) {
+                dataImage[originalPath].setReUseBitmap(true);
+                dataImage[newPath].setReUseBitmap(true);
+                dataImage[originalPath].run();
+                dataImage[newPath].run();
+                while (dataImage[originalPath].isAlive() || dataImage[newPath].isAlive()) {
+                    Thread.yield();
+                }
+
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                super.onPostExecute(aVoid);
+                galleryAdapter.notifyDataSetChanged();
+            }
+        }.execute();
+
+        galleryAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -139,7 +165,12 @@ public class MainFragment extends Fragment {
                         file.renameTo(new File(image.getFilePath() + "/" + file.getName()));
                     }
                     Toast.makeText(inflater.getContext(), "Файлы успешно перемещены", Toast.LENGTH_SHORT).show();
-                    upDateData();
+                    String dir = mFilesToMove[0].getParent();
+                    for (int i = 0; i < dataImage.length; i++)
+                        if (dataImage[i].getFilePath().equals(dir)) {
+                            upDateData(i, position);
+                            break;
+                        }
                 } else
                     openGalleryFragment(((Image) galleryAdapter.getItem(position)).getFilePath());
             }
@@ -153,8 +184,6 @@ public class MainFragment extends Fragment {
 
         public GalleryAdapter(LayoutInflater inflater) {
             mInflater = inflater;
-        /*    ImageLoader imageLoader = new ImageLoader();
-            imageLoader.execute(file);*/
         }
 
         @Override
@@ -192,12 +221,9 @@ public class MainFragment extends Fragment {
             }
 
             Image image = (Image)getItem(position);
-            try {
-                holder.imageView.setImageBitmap(image.getBitmap());
-                holder.textView.setText(image.getFileDirName());
-            } catch (Exception e) {
-                holder.imageView.setImageBitmap(null);
-            }
+            holder.imageView.setImageBitmap(image.getBitmap());
+            holder.textView.setText(image.getFileDirName());
+
 
             return convertView;
         }
@@ -211,6 +237,5 @@ public class MainFragment extends Fragment {
 
     public interface OnFragmentInteractionListener {
         void onFragmentInteraction(String fileName);
-        void upDateFragment();
     }
 }

@@ -56,8 +56,10 @@ public class DetailFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_item, container, false);
 
         mImageView = (ImageView) view.findViewById(R.id.imageViewDetail);
-        if (image != null)
+        if (image != null) {
             mImageView.setImageBitmap(image.getBitmap());
+        }
+
 
         return view;
     }

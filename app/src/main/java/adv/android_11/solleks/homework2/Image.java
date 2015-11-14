@@ -48,7 +48,7 @@ import android.media.ExifInterface;
     }
 
     public Bitmap getBitmap() {
-        if (reUseBitmap)
+        if (reUseBitmap || this.isAlive())
             return null;
         else
             return mBitmap;
@@ -180,11 +180,14 @@ import android.media.ExifInterface;
                         bitmap.getHeight());
             }
 
-            if (!decodedBitmap.equals(bitmap)) {
+            if (decodedBitmap != bitmap) {
                 decodedBitmap.recycle();
             }
 
-            return bitmap;
+            if (bitmap.isRecycled())
+                return null;
+            else
+                return bitmap;
         } catch (Exception e) {
             return null;
         }

@@ -28,6 +28,8 @@ public class MainActivity extends AppCompatActivity
     private GalleryFragment galleryFragment;
     private DetailFragment detailFragment;
 
+    private boolean upDateGalleryFragmentData;
+
     private static int DisplayWidth;
     private static int DisplayHeight;
 
@@ -118,8 +120,12 @@ public class MainActivity extends AppCompatActivity
                     .addToBackStack(null)
                     .commit();
         }
-        if (galleryFragment.getOpenedDir() == null || !galleryFragment.getOpenedDir().equals(fileName))
+        if (galleryFragment.getOpenedDir() == null ||
+                !galleryFragment.getOpenedDir().equals(fileName) ||
+                upDateGalleryFragmentData)
             galleryFragment.changePath(fileName);
+        if (upDateGalleryFragmentData)
+            upDateGalleryFragmentData = false;
     }
 
 
@@ -149,15 +155,11 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    @Override
-    public void upDateFragment() {
-        new DirLoader().execute(Environment.getExternalStorageDirectory());
-    }
-
     public void moveItem() {
         File[] files = galleryFragment.getSelectedFiles();
         galleryFragment.cancelSelecting();
         mainFragment.setSelectDirToMove(files);
+        upDateGalleryFragmentData = true;
         onBackPressed();
     }
 
@@ -205,65 +207,6 @@ public class MainActivity extends AppCompatActivity
                 mainFragment.setData(strings);
             }
         }
-
-        public ArrayList<String> saveFilesFromDir(File rootDir) {
-            ArrayList<String> data = new ArrayList<>();
-
-            File[] dirList = rootDir.listFiles(new FilenameFilter() {
-                public boolean accept(File dir, String name) {
-                    return (!name.contains("."));
-                }
-            });
-            File[] imageList = rootDir.listFiles(new FilenameFilter() {
-                public boolean accept(File dir, String name) {
-                    return (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png"));
-                }
-            });
-
-            ArrayList<File> fileList = new ArrayList<>();
-            fileList.addAll(Arrays.asList(imageList));
-            fileList = sort(fileList);
-            if (fileList.size() > 0) {
-                data.add(fileList.get(fileList.size() - 1).getAbsolutePath());
-            }
-            for (File dir : dirList) {
-                String subDirs[] = dir.getAbsolutePath().split("/");
-                boolean contains = false;
-                for (String subDir : subDirs)
-                    if (subDir.equals("Music")) {
-                        contains = true;
-                        break;
-                    }
-                if (!contains)
-                    data.addAll(saveFilesFromDir(dir));
-            }
-
-            return data;
-        }
-
-        public ArrayList<File> sort(ArrayList<File> input) {
-            if (input.size() == 0) {
-                return input;
-            }
-            File head = input.get(0);
-            input.remove(0);
-            ArrayList<File> right = new ArrayList<>(input.size()/2);
-            ArrayList<File> left = new ArrayList<>(input.size()/2);
-
-            for(File element: input) {
-                if (element.lastModified() > head.lastModified()) {
-                    right.add(element);
-                } else {
-                    left.add(element);
-                }
-            }
-
-            ArrayList<File> result = new ArrayList<>(input.size());
-            result.addAll(sort(left));
-            result.add(head);
-            result.addAll(sort(right));
-            return result;
-        }
     }
 
     @Override
@@ -283,5 +226,64 @@ public class MainActivity extends AppCompatActivity
         }
 
         super.onBackPressed();
+    }
+
+    public static ArrayList<String> saveFilesFromDir(File rootDir) {
+        ArrayList<String> data = new ArrayList<>();
+
+        File[] dirList = rootDir.listFiles(new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                return (!name.contains("."));
+            }
+        });
+        File[] imageList = rootDir.listFiles(new FilenameFilter() {
+            public boolean accept(File dir, String name) {
+                return (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png"));
+            }
+        });
+
+        ArrayList<File> fileList = new ArrayList<>();
+        fileList.addAll(Arrays.asList(imageList));
+        fileList = sort(fileList);
+        if (fileList.size() > 0) {
+            data.add(fileList.get(fileList.size() - 1).getAbsolutePath());
+        }
+        for (File dir : dirList) {
+            String subDirs[] = dir.getAbsolutePath().split("/");
+            boolean contains = false;
+            for (String subDir : subDirs)
+                if (subDir.equals("Music")) {
+                    contains = true;
+                    break;
+                }
+            if (!contains)
+                data.addAll(saveFilesFromDir(dir));
+        }
+
+        return data;
+    }
+
+    public static ArrayList<File> sort(ArrayList<File> input) {
+        if (input.size() == 0) {
+            return input;
+        }
+        File head = input.get(0);
+        input.remove(0);
+        ArrayList<File> right = new ArrayList<>(input.size()/2);
+        ArrayList<File> left = new ArrayList<>(input.size()/2);
+
+        for(File element: input) {
+            if (element.lastModified() > head.lastModified()) {
+                right.add(element);
+            } else {
+                left.add(element);
+            }
+        }
+
+        ArrayList<File> result = new ArrayList<>(input.size());
+        result.addAll(sort(left));
+        result.add(head);
+        result.addAll(sort(right));
+        return result;
     }
 }

@@ -249,10 +249,7 @@ public class GalleryFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
-            if (image.getBitmap() != null && !image.getBitmap().isRecycled())
-                holder.imageView.setImageBitmap(image.getBitmap());
-            else
-                holder.imageView.setImageBitmap(null);
+            holder.imageView.setImageBitmap(image.getBitmap());
 
             if (mIsNowSelecting && mSelectedItems.contains(position)) {
                 holder.imageView.setPadding(5, 5, 5, 5);
