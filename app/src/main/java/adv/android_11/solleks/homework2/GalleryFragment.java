@@ -140,11 +140,11 @@ public class GalleryFragment extends Fragment {
             @Override
             public void onScrollStateChanged(AbsListView view, int scrollState) {
                 mSliding = true;
-
             }
 
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                // TODO Придумать, как реализовать проверку на отображение всех картинок
                 if (mSliding && visibleItemCount != 0) {
                     mSliding = false;
                     galleryAdapter.upDate(firstVisibleItem, visibleItemCount);
@@ -249,7 +249,11 @@ public class GalleryFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
-            holder.imageView.setImageBitmap(image.getBitmap());
+
+            if (image.getBitmap() != null && !image.getBitmap().isRecycled())
+                holder.imageView.setImageBitmap(image.getBitmap());
+            else
+                holder.imageView.setImageBitmap(null);
 
             if (mIsNowSelecting && mSelectedItems.contains(position)) {
                 holder.imageView.setPadding(5, 5, 5, 5);
@@ -301,6 +305,13 @@ public class GalleryFragment extends Fragment {
         protected void onProgressUpdate(Void... values) {
             super.onProgressUpdate(values);
             galleryAdapter.notifyDataSetChanged();
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            if (galleryAdapter != null)
+                galleryAdapter.notifyDataSetChanged();
         }
     }
 

@@ -143,6 +143,13 @@ public class MainFragment extends Fragment {
             if (galleryAdapter != null)
                 galleryAdapter.notifyDataSetChanged();
         }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            if (galleryAdapter != null)
+                galleryAdapter.notifyDataSetChanged();
+        }
     }
 
 

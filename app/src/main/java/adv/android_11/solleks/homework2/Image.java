@@ -48,7 +48,7 @@ import android.media.ExifInterface;
     }
 
     public Bitmap getBitmap() {
-        if (reUseBitmap || this.isAlive())
+        if (reUseBitmap || this.isAlive() || mBitmap == null || mBitmap.isRecycled())
             return null;
         else
             return mBitmap;
@@ -180,13 +180,15 @@ import android.media.ExifInterface;
                         bitmap.getHeight());
             }
 
-            if (decodedBitmap != bitmap) {
-                decodedBitmap.recycle();
+            // TODO Я твой дом труба шатал
+         /*   if (decodedBitmap == bitmap) {
+                if (!decodedBitmap.isRecycled())
+                    decodedBitmap.recycle();
             }
 
             if (bitmap.isRecycled())
                 return null;
-            else
+            else*/
                 return bitmap;
         } catch (Exception e) {
             return null;
