@@ -1,6 +1,7 @@
 package adv.android_11.solleks.homework2;
 
 import android.content.Context;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -29,8 +30,12 @@ public class MainFragment extends Fragment {
     public static final String DATA_KEY = "adv.android_11.solleks.homework2.MainFragment.DATA_KEY";
     public static final String TAG = "adv.android_11.solleks.homework2.MainFragment";
 
+    private TempClass temp;
+
+    private Context mAppContext;
+
     private ArrayList<String> data;
-    private Image[] dataImage;
+    private ArrayList<Image> dataImage;
     private GalleryAdapter galleryAdapter;
 
     private boolean mSelectDirToMove;
@@ -49,6 +54,13 @@ public class MainFragment extends Fragment {
     public void setSelectDirToMove(File[] files) {
         mSelectDirToMove = true;
         mFilesToMove = files;
+
+        Image image = new Image();
+        image.setBitmap(BitmapFactory.decodeResource(
+                mAppContext.getResources(),
+                R.drawable.add_button));
+        dataImage.add(image);
+        galleryAdapter.notifyDataSetChanged();
     }
 
     public void setData(ArrayList<String> data) {
@@ -56,13 +68,13 @@ public class MainFragment extends Fragment {
         File rootSD = Environment.getExternalStorageDirectory();
 
         if (data != null) {
-            dataImage = new Image[data.size()];
+            dataImage = new ArrayList<>();
             for (int i = 0; i < data.size(); i++) {
-                dataImage[i] = new Image(data.get(i), i, null);
-                dataImage[i].setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
+                dataImage.add(new Image(data.get(i), i, null));
+                dataImage.get(i).setDimens(IMAGE_WIDTH, IMAGE_HEIGHT);
             }
         } else {
-            dataImage = new Image[0];
+            dataImage = new ArrayList<>();
         }
         ImageLoader imageLoader = new ImageLoader();
         imageLoader.execute(rootSD);
@@ -83,26 +95,22 @@ public class MainFragment extends Fragment {
         mListener.onFragmentInteraction(fileName);
     }
 
-    public void upDateData(final int originalPath, final int newPath) {
+    public void upDateData(int originalPath, int newPath) {
 
-        ArrayList<String> originalFile = MainActivity.saveFilesFromDir(new File(dataImage[originalPath].getFilePath()));
-        ArrayList<String> newFile = MainActivity.saveFilesFromDir(new File(dataImage[newPath].getFilePath()));
+        ArrayList<String> originalFile = MainActivity.saveFilesFromDir(new File(dataImage.get(originalPath).getFilePath()));
+        ArrayList<String> newFile = MainActivity.saveFilesFromDir(new File(dataImage.get(newPath).getFilePath()));
 
-        if (originalFile != null && originalFile.size() > 0)
-            dataImage[originalPath].setImageFile(originalFile.get(0));
-        if (newFile != null && newFile.size() > 0)
-            dataImage[newPath].setImageFile(newFile.get(0));
-
-        new AsyncTask<Void, Void, Void>(){
+        AsyncTask<Integer, Void, Void> task = new AsyncTask<Integer, Void, Void>(){
             @Override
-            protected Void doInBackground(Void... params) {
-                dataImage[originalPath].setReUseBitmap(true);
-                dataImage[newPath].setReUseBitmap(true);
-                dataImage[originalPath].run();
-                dataImage[newPath].run();
-                while (dataImage[originalPath].isAlive() || dataImage[newPath].isAlive()) {
-                    Thread.yield();
+            protected Void doInBackground(Integer... params) {
+                for (Integer i : params) {
+                    dataImage.get(i).setReUseBitmap(true);
+                    dataImage.get(i).run();
                 }
+                for (Integer i : params)
+                    while (dataImage.get(i).isAlive()) {
+                        Thread.yield();
+                    }
 
                 return null;
             }
@@ -112,7 +120,35 @@ public class MainFragment extends Fragment {
                 super.onPostExecute(aVoid);
                 galleryAdapter.notifyDataSetChanged();
             }
-        }.execute();
+        };
+
+        if (originalFile != null && newFile != null) {
+            if (originalFile.size() == 0 && newFile.size() == 0) {
+                if (originalPath > newPath) {
+                    dataImage.remove(originalPath);
+                    dataImage.remove(newPath);
+                } else {
+                    dataImage.remove(newPath);
+                    dataImage.remove(originalPath);
+                }
+            } else if ( originalFile.size() == 0) {
+                dataImage.remove(originalPath);
+                if (originalPath < newPath)
+                    newPath--;
+                dataImage.get(newPath).setImageFile(newFile.get(0));
+                task.execute(newPath);
+            } else if (newFile.size() == 0) {
+                dataImage.remove(newPath);
+                if (newPath < originalPath)
+                    originalPath--;
+                dataImage.get(originalPath).setImageFile(originalFile.get(0));
+                task.execute(originalPath);
+            } else {
+                dataImage.get(originalPath).setImageFile(originalFile.get(0));
+                dataImage.get(newPath).setImageFile(newFile.get(0));
+                task.execute(originalPath, newPath);
+            }
+        }
 
         galleryAdapter.notifyDataSetChanged();
     }
@@ -131,8 +167,8 @@ public class MainFragment extends Fragment {
     class ImageLoader extends AsyncTask<File, Void, Void> {
         @Override
         protected Void doInBackground(File... params) {
-            for (int i = 0; i < data.size(); i++) {
-                dataImage[i].run();
+            for (Image image : dataImage) {
+                image.run();
                 publishProgress();
             }
             return null;
@@ -160,29 +196,78 @@ public class MainFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_main, container, false);
         GridView gridView = (GridView)view.findViewById(R.id.menuGridView);
 
+        mAppContext = inflater.getContext().getApplicationContext();
+
         galleryAdapter = new GalleryAdapter(inflater);
         gridView.setAdapter(galleryAdapter);
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (mSelectDirToMove) {
-                    mSelectDirToMove = false;
+                    // TODO Добавить отмену перемещения
+                    // TODO Добавить "Горение" перемещаемых файлов
                     Image image = ((Image) galleryAdapter.getItem(position));
-                    for (File file : mFilesToMove) {
-                        file.renameTo(new File(image.getFilePath() + "/" + file.getName()));
+                    temp = new TempClass(image, position, inflater);
+                    if (image.getFileName() == null) {
+                        NewAlbumFragment dialogFragment = new NewAlbumFragment();
+                        dialogFragment.show(getFragmentManager(), "tag  ");
+                    } else {
+                        mSelectDirToMove = false;
+                        temp.saveFiles();
                     }
-                    Toast.makeText(inflater.getContext(), "Файлы успешно перемещены", Toast.LENGTH_SHORT).show();
-                    String dir = mFilesToMove[0].getParent();
-                    for (int i = 0; i < dataImage.length; i++)
-                        if (dataImage[i].getFilePath().equals(dir)) {
-                            upDateData(i, position);
-                            break;
-                        }
                 } else
                     openGalleryFragment(((Image) galleryAdapter.getItem(position)).getFilePath());
             }
         });
         return view;
+    }
+
+    class TempClass {
+
+        private Image image;
+        private int position;
+        private LayoutInflater inflater;
+        private boolean isNewAlbum;
+
+        TempClass(Image image, int position, LayoutInflater inflater) {
+            this.image = image;
+            this.position = position;
+            this.inflater = inflater;
+            this.isNewAlbum = false;
+        }
+
+        public Image getImage() {
+            return image;
+        }
+
+        public void setNewAlbum(boolean isNewAlbum) {
+            this.isNewAlbum = isNewAlbum;
+        }
+
+        public void saveFiles() {
+            new File(image.getFileName() + "/").mkdirs();
+            for (File file : mFilesToMove) {
+                file.renameTo(new File(image.getFilePath() + "/" + file.getName()));
+            }
+            Toast.makeText(inflater.getContext(), "Файлы успешно перемещены", Toast.LENGTH_SHORT).show();
+            if (!isNewAlbum)
+                dataImage.remove(dataImage.size() - 1);
+            String dir = mFilesToMove[0].getParent();
+            for (int i = 0; i < dataImage.size(); i++)
+                if (dataImage.get(i).getFilePath().equals(dir)) {
+                    upDateData(i, position);
+                    break;
+                }
+        }
+    }
+
+    public void createAlbum(String name) {
+        temp.getImage().setImageFile(Environment.getExternalStorageDirectory() +
+                getResources().getString(R.string.SAVE_FILES_PATH) +
+                name);
+        temp.setNewAlbum(true);
+        temp.saveFiles();
+        mSelectDirToMove = false;
     }
 
     public class GalleryAdapter extends BaseAdapter {
@@ -195,7 +280,7 @@ public class MainFragment extends Fragment {
 
         @Override
         public int getCount() {
-            return dataImage.length;
+            return dataImage.size();
         }
 
         @Override
@@ -203,7 +288,7 @@ public class MainFragment extends Fragment {
             if (dataImage == null)
                 return new Image();
             else
-                return dataImage[position];
+                return dataImage.get(position);
         }
 
         @Override
@@ -211,7 +296,7 @@ public class MainFragment extends Fragment {
             if (dataImage == null)
                 return position;
             else
-                return dataImage[position].getImageID();
+                return dataImage.get(position).getImageID();
         }
 
         public View getView(int position, View convertView, ViewGroup parent) {
@@ -228,8 +313,15 @@ public class MainFragment extends Fragment {
             }
 
             Image image = (Image)getItem(position);
+
             holder.imageView.setImageBitmap(image.getBitmap());
-            holder.textView.setText(image.getFileDirName());
+            if (image.getFileName() == null)
+                holder.textView.setVisibility(View.INVISIBLE);
+            else {
+                holder.textView.setText(image.getFileDirName());
+                if (holder.textView.getVisibility() == View.INVISIBLE)
+                    holder.textView.setVisibility(View.VISIBLE);
+            }
 
 
             return convertView;

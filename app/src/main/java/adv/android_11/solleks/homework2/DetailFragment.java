@@ -1,5 +1,6 @@
 package adv.android_11.solleks.homework2;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -20,6 +21,8 @@ public class DetailFragment extends Fragment {
     private ImageView mImageView;
     private Loader loader;
     private Image image;
+
+    private OnDetailFragmentListener onDetailFragmentListener;
 
     public void setImageFile(String imageFile) {
         mImageView.setImageDrawable(null);
@@ -51,6 +54,17 @@ public class DetailFragment extends Fragment {
     }
 
     @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        try {
+            onDetailFragmentListener = (OnDetailFragmentListener) context;
+        } catch (ClassCastException e) {
+            throw new ClassCastException(context.toString()
+                    + " должен реализовывать интерфейс OnDetailFragmentListener");
+        }
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         setRetainInstance(true);
         View view = inflater.inflate(R.layout.fragment_item, container, false);
@@ -65,4 +79,7 @@ public class DetailFragment extends Fragment {
     }
 
 
+    public interface OnDetailFragmentListener {
+        void setActionBarDisplay(boolean show);
+    }
 }

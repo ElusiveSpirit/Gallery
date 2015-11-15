@@ -44,7 +44,7 @@ public class GalleryFragment extends Fragment {
     private HashSet<Integer> mSelectedItems;
     private boolean mIsNowSelecting;
 
-    private OnDetailFragmentListener onDetailFragmentListener;
+    private OnGalleryFragmentListener onGalleryFragmentListener;
 
     public void changePath(String path) {
         this.mPath = path;
@@ -66,7 +66,7 @@ public class GalleryFragment extends Fragment {
     public void onAttach(Context context) {
         super.onAttach(context);
         try {
-            onDetailFragmentListener = (OnDetailFragmentListener) context;
+            onGalleryFragmentListener = (OnGalleryFragmentListener) context;
         } catch (ClassCastException e) {
             throw new ClassCastException(context.toString()
                     + " должен реализовывать интерфейс OnDetailFragmentListener");
@@ -74,7 +74,11 @@ public class GalleryFragment extends Fragment {
     }
 
     public void openGalleryFragment(String fileName) {
-        onDetailFragmentListener.onDetailFragmentOpener(fileName);
+        onGalleryFragmentListener.onDetailFragmentOpener(fileName);
+    }
+
+    public void showMoveButton(boolean show) {
+        onGalleryFragmentListener.showMoveButton(show);
     }
 
     @Override
@@ -157,8 +161,10 @@ public class GalleryFragment extends Fragment {
                 if (mIsNowSelecting) {
                     if (mSelectedItems.contains(position)) {
                         mSelectedItems.remove(position);
-                        if (mSelectedItems.size() == 0)
+                        if (mSelectedItems.size() == 0) {
                             mIsNowSelecting = false;
+                            showMoveButton(false);
+                        }
                     }
                     else
                         mSelectedItems.add(position);
@@ -173,8 +179,10 @@ public class GalleryFragment extends Fragment {
                 if (mIsNowSelecting) {
                     if (mSelectedItems.contains(position)) {
                         mSelectedItems.remove(position);
-                        if (mSelectedItems.size() == 0)
+                        if (mSelectedItems.size() == 0) {
                             mIsNowSelecting = false;
+                            showMoveButton(false);
+                        }
                     }
                     else
                         mSelectedItems.add(position);
@@ -182,6 +190,7 @@ public class GalleryFragment extends Fragment {
                     return false;
                 } else {
                     mIsNowSelecting = true;
+                    showMoveButton(true);
                     mSelectedItems.add(position);
                     galleryAdapter.notifyDataSetChanged();
                     return true;
@@ -321,6 +330,7 @@ public class GalleryFragment extends Fragment {
 
     public void cancelSelecting() {
         mIsNowSelecting = false;
+        showMoveButton(false);
         mSelectedItems.clear();
         galleryAdapter.notifyDataSetChanged();
     }
@@ -346,9 +356,9 @@ public class GalleryFragment extends Fragment {
         return mPath;
     }
 
-    public interface OnDetailFragmentListener {
+    public interface OnGalleryFragmentListener {
         void onDetailFragmentOpener(String fileName);
-        void onItemMove(HashSet<Integer> items);
+        void showMoveButton(boolean show);
     }
 
 }

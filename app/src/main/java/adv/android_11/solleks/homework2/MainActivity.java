@@ -6,29 +6,35 @@ import android.os.Environment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity
         implements
             MainFragment.OnFragmentInteractionListener,
-            GalleryFragment.OnDetailFragmentListener{
+            GalleryFragment.OnGalleryFragmentListener,
+            DetailFragment.OnDetailFragmentListener,
+            NewAlbumFragment.OnAlertFragmentListener,
+            FragmentManager.OnBackStackChangedListener{
 
     private MainFragment mainFragment;
     private GalleryFragment galleryFragment;
     private DetailFragment detailFragment;
 
     private boolean upDateGalleryFragmentData;
+
+    private ActionBar mActionBar;
 
     private static int DisplayWidth;
     private static int DisplayHeight;
@@ -40,8 +46,12 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        mActionBar = getSupportActionBar();
 
         FragmentManager manager = getSupportFragmentManager();
+        manager.addOnBackStackChangedListener(this);
+        changeActionBar();
+
         List<Fragment> fragments = manager.getFragments();
 
 
@@ -80,21 +90,20 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-       //noinspection SimplifiableIfStatement
         switch (id) {
             case R.id.action_settings :
+                NewAlbumFragment albumFragment = new NewAlbumFragment();
+                albumFragment.show(getSupportFragmentManager(), "tag1");
+                Toast.makeText(MainActivity.this, "Toast", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, albumFragment.getText(), Toast.LENGTH_SHORT).show();
                 return true;
             case R.id.action_move :
                 moveItem();
@@ -151,8 +160,8 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onItemMove(HashSet<Integer> items) {
-
+    public void showMoveButton(boolean show) {
+        ((Toolbar)findViewById(R.id.toolbar)).getMenu().findItem(R.id.action_move).setVisible(show);
     }
 
     public void moveItem() {
@@ -168,6 +177,39 @@ public class MainActivity extends AppCompatActivity
     }
     public static int getDisplayHeight() {
         return DisplayHeight;
+    }
+
+    @Override
+    public void onBackStackChanged() {
+        changeActionBar();
+    }
+
+    public void changeActionBar(){
+        //Enable Up button only  if there are entries in the back stack
+        boolean canBack = getSupportFragmentManager().getBackStackEntryCount() > 0;
+        if (mActionBar != null && mainFragment != null)
+            if (mainFragment.isHidden())
+                mActionBar.setDisplayHomeAsUpEnabled(canBack);
+            else {
+                ((Toolbar)findViewById(R.id.toolbar)).getMenu().findItem(R.id.action_move).setVisible(false);
+            }
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        //This method is called when the up button is pressed. Just the pop back stack.
+        getSupportFragmentManager().popBackStack();
+        return true;
+    }
+
+    @Override
+    public void setActionBarDisplay(boolean show) {
+        ((Toolbar)findViewById(R.id.toolbar)).setVisibility(show ? View.VISIBLE : View.INVISIBLE);
+    }
+
+    @Override
+    public void newAlbum(String albumName) {
+        mainFragment.createAlbum(albumName);
     }
 
     class DirLoader extends AsyncTask<File, Image, ArrayList<String>> {

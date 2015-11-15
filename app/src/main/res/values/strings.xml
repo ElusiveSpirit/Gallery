@@ -3,4 +3,10 @@
     <string name="action_settings">Настройки</string>
     <string name="action_move">Переместить</string>
     <string name="image_name">image</string>
+    <string name="write_path_down">Введите название для нового альбома</string>
+    <string name="new_album">Новый альбом</string>
+    <string name="dialog_yes">Создать</string>
+    <string name="dialog_no">Отмена</string>
+    <string name="message_text">Новый альбом</string>
+    <string name="SAVE_FILES_PATH">/images/</string>
 </resources>
