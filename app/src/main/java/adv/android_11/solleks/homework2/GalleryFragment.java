@@ -53,8 +53,9 @@ public class GalleryFragment extends Fragment {
         gridView.post(new Runnable() {
             @Override
             public void run() {
-                // TODO Заменить на что то более пригодное T_T
-                gridView.smoothScrollToPosition(0);
+                // TODO !!!!!!! Заменить на что то более пригодное T_T !!!!!!!!!
+                //gridView.smoothScrollToPosition(0);
+
             }
         });
         this.mPath = path;
@@ -160,7 +161,6 @@ public class GalleryFragment extends Fragment {
 
             @Override
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-                // TODO Придумать, как реализовать проверку на отображение всех картинок
                 if (mSliding && visibleItemCount != 0) {
                     mSliding = false;
                     galleryAdapter.upDate(firstVisibleItem, visibleItemCount);
@@ -226,8 +226,14 @@ public class GalleryFragment extends Fragment {
 
         public void upDate(int firstVisibleItem, int visibleItemCount) {
             try {
-                if (imageLoader != null && imageLoader.getStatus() == AsyncTask.Status.RUNNING) {
-                    imageLoader.cancel(false);
+                if (imageLoader != null) {
+                    if (imageLoader.getStatus() == AsyncTask.Status.RUNNING) {
+                        if (firstVisibleItem == imageLoader.getFirstFile() &&
+                                visibleItemCount == imageLoader.getVisibleFiles()) {
+                            return;
+                        }
+                        imageLoader.cancel(false);
+                    }
                 }
                 imageLoader = new ImageLoader();
                 imageLoader.execute(firstVisibleItem, visibleItemCount);
@@ -270,11 +276,15 @@ public class GalleryFragment extends Fragment {
 
             Image image = (Image)getItem(position);
 
-
-            if (!isLoading && image.getBitmap() != null && !image.getBitmap().isRecycled())
-                holder.imageView.setImageBitmap(image.getBitmap());
-            else
-                holder.imageView.setImageBitmap(null);
+            if (!isLoading) {
+                if (image.getBitmap() != null && !image.getBitmap().isRecycled())
+                    holder.imageView.setImageBitmap(image.getBitmap());
+                else {
+                    if (!image.isAlive())
+                        mSliding = true;
+                    holder.imageView.setImageBitmap(null);
+                }
+            } else holder.imageView.setImageBitmap(null);
 
             if (mIsNowSelecting && mSelectedItems.contains(position)) {
                 holder.imageView.setPadding(5, 5, 5, 5);
@@ -295,17 +305,30 @@ public class GalleryFragment extends Fragment {
 
     class ImageLoader extends AsyncTask<Integer, Void, Void> {
 
+        private int firstFile;
+        private int visibleFiles;
+
+        public int getFirstFile() {
+            return firstFile;
+        }
+
+        public int getVisibleFiles() {
+            return visibleFiles;
+        }
+
         @Override
         protected Void doInBackground(Integer... params) {
-            int
-                firstFile = params[0],
-                visibleFiles = params[1],
-                loadedFile = 0;
+
+            firstFile = params[0];
+            visibleFiles = params[1];
+
+            int loadedFile = firstFile;
 
             for (int i = firstFile; i < firstFile + visibleFiles; i++) {
                 if (isCancelled()) return null;
 
-                mData[i].run();
+                if (!mData[i].isAlive())
+                    mData[i].run();
 
                 for (int j = loadedFile; j <= i; j++) {
                     if (!mData[j].isAlive() && mData[j].getBitmap() != null) {
@@ -315,7 +338,7 @@ public class GalleryFragment extends Fragment {
                 }
             }
 
-            while (mData[firstFile + visibleFiles - 1].isAlive())
+            while (mData[firstFile + visibleFiles - 1].isAlive() && !isCancelled())
                 Thread.yield();
             this.publishProgress();
 
