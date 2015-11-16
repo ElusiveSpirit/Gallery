@@ -21,6 +21,7 @@ public class NewAlbumFragment extends DialogFragment implements View.OnClickList
 
     private void succeed(String name) {
         alertFragmentListener.newAlbum(name);
+        // TODO Добавить проверку на корректность навзания
     }
 
     @Override

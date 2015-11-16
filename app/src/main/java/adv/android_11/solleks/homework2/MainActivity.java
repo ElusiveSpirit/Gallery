@@ -91,6 +91,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        ((Toolbar) findViewById(R.id.toolbar)).getMenu().findItem(R.id.action_move).setVisible(false);
         return true;
     }
 
@@ -187,12 +188,13 @@ public class MainActivity extends AppCompatActivity
     public void changeActionBar(){
         //Enable Up button only  if there are entries in the back stack
         boolean canBack = getSupportFragmentManager().getBackStackEntryCount() > 0;
-        if (mActionBar != null && mainFragment != null)
+        if (mActionBar != null && mainFragment != null) {
             if (mainFragment.isHidden())
                 mActionBar.setDisplayHomeAsUpEnabled(canBack);
             else {
-                ((Toolbar)findViewById(R.id.toolbar)).getMenu().findItem(R.id.action_move).setVisible(false);
+                ((Toolbar) findViewById(R.id.toolbar)).getMenu().findItem(R.id.action_move).setVisible(false);
             }
+        }
     }
 
     @Override
@@ -256,6 +258,10 @@ public class MainActivity extends AppCompatActivity
         android.support.v4.app.FragmentManager manager = getSupportFragmentManager();
 
         if (manager.findFragmentByTag(MainFragment.TAG).isVisible()) {
+            if (mainFragment.isSelectingDir()) {
+                mainFragment.cancelSelecting();
+                return;
+            }
             finish();
         } else if (manager.findFragmentByTag(GalleryFragment.TAG).isVisible()) {
             if (galleryFragment.isIsNowSelecting()) {

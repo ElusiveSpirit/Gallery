@@ -35,6 +35,7 @@ public class GalleryFragment extends Fragment {
     private MemoryCache mMemoryCache;
     private boolean mSliding;
 
+    private boolean isLoading;
     private Image[] mData = new Image[0];
     private Stack<Bitmap> mFreeBitmaps;
 
@@ -47,6 +48,15 @@ public class GalleryFragment extends Fragment {
     private OnGalleryFragmentListener onGalleryFragmentListener;
 
     public void changePath(String path) {
+        isLoading = true;
+        galleryAdapter.notifyDataSetChanged();
+        gridView.post(new Runnable() {
+            @Override
+            public void run() {
+                // TODO Заменить на что то более пригодное T_T
+                gridView.smoothScrollToPosition(0);
+            }
+        });
         this.mPath = path;
         // Удаление предыдущих данных
 
@@ -86,6 +96,7 @@ public class GalleryFragment extends Fragment {
         super.onCreate(savedInstanceState);
         mFreeBitmaps = new Stack<>();
         mSelectedItems = new HashSet<>();
+        isLoading = false;
 
         // Создание кеша
         final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
@@ -102,6 +113,7 @@ public class GalleryFragment extends Fragment {
         });
 
         mData = new Image[imageList.length];
+        isLoading = false;
         for (int i = 0; i < imageList.length; i++) {
             mData[i] = new Image(imageList[i].getPath(), i, mMemoryCache);
             if (!mFreeBitmaps.empty()) {
@@ -259,7 +271,7 @@ public class GalleryFragment extends Fragment {
             Image image = (Image)getItem(position);
 
 
-            if (image.getBitmap() != null && !image.getBitmap().isRecycled())
+            if (!isLoading && image.getBitmap() != null && !image.getBitmap().isRecycled())
                 holder.imageView.setImageBitmap(image.getBitmap());
             else
                 holder.imageView.setImageBitmap(null);

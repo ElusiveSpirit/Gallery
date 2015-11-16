@@ -71,10 +71,12 @@ import android.media.ExifInterface;
     }
 
     public String getFilePath() {
-        String s[] = mImageFile.split("/"), str = "";
-        for (int i = 1; i < s.length - 1; i++)
-            str += "/" + s[i];
-        return str;
+        if (mImageFile.contains(".")) {
+            String s[] = mImageFile.split("/"), str = "";
+            for (int i = 1; i < s.length - 1; i++)
+                str += "/" + s[i];
+            return str;
+        } else return mImageFile;
     }
 
     public void setDimens(int width, int height) {

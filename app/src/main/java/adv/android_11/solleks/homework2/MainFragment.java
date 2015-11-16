@@ -38,7 +38,7 @@ public class MainFragment extends Fragment {
     private ArrayList<Image> dataImage;
     private GalleryAdapter galleryAdapter;
 
-    private boolean mSelectDirToMove;
+    private boolean isSelectingDir;
     private File[] mFilesToMove;
 
     private OnFragmentInteractionListener mListener;
@@ -52,7 +52,7 @@ public class MainFragment extends Fragment {
     }
 
     public void setSelectDirToMove(File[] files) {
-        mSelectDirToMove = true;
+        isSelectingDir = true;
         mFilesToMove = files;
 
         Image image = new Image();
@@ -158,7 +158,7 @@ public class MainFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
 
-        mSelectDirToMove = false;
+        isSelectingDir = false;
 
         data = getArguments().getStringArrayList(DATA_KEY);
         setData(data);
@@ -203,16 +203,14 @@ public class MainFragment extends Fragment {
         gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (mSelectDirToMove) {
-                    // TODO Добавить отмену перемещения
+                if (isSelectingDir) {
                     // TODO Добавить "Горение" перемещаемых файлов
                     Image image = ((Image) galleryAdapter.getItem(position));
                     temp = new TempClass(image, position, inflater);
                     if (image.getFileName() == null) {
-                        NewAlbumFragment dialogFragment = new NewAlbumFragment();
-                        dialogFragment.show(getFragmentManager(), "tag  ");
+                        new NewAlbumFragment().show(getFragmentManager(), "tag  ");
                     } else {
-                        mSelectDirToMove = false;
+                        isSelectingDir = false;
                         temp.saveFiles();
                     }
                 } else
@@ -245,7 +243,7 @@ public class MainFragment extends Fragment {
         }
 
         public void saveFiles() {
-            new File(image.getFileName() + "/").mkdirs();
+            new File(image.getFilePath() + "/").mkdirs();
             for (File file : mFilesToMove) {
                 file.renameTo(new File(image.getFilePath() + "/" + file.getName()));
             }
@@ -261,13 +259,23 @@ public class MainFragment extends Fragment {
         }
     }
 
+    public boolean isSelectingDir() {
+        return this.isSelectingDir;
+    }
+
+    public void cancelSelecting() {
+        dataImage.remove(dataImage.size() - 1);
+        this.isSelectingDir = false;
+        galleryAdapter.notifyDataSetChanged();
+    }
+
     public void createAlbum(String name) {
         temp.getImage().setImageFile(Environment.getExternalStorageDirectory() +
                 getResources().getString(R.string.SAVE_FILES_PATH) +
                 name);
         temp.setNewAlbum(true);
         temp.saveFiles();
-        mSelectDirToMove = false;
+        isSelectingDir = false;
     }
 
     public class GalleryAdapter extends BaseAdapter {
